@@ -18,7 +18,7 @@ The rest of the dependencies will be automatically fetched by CMake.
   * [Visual Studio 2022](https://visualstudio.microsoft.com/) (and install the C++ toolchain) ***(STRONGLY recommended if you are taking another class with me)***
   * [Build Tools for Visual Studio 2022](https://aka.ms/vs/17/release/vs_BuildTools.exe
   ) 
-* ***For Linux:*** 
+* ***For Linux:*** GNU g++ compilers should work.
 * ***For Mac:*** The included Clang g++ compilers should be fine.
 
 ### CMake
