@@ -88,6 +88,8 @@ FetchContent_MakeAvailable(fetch_vk_bootstrap)
 
 include_directories("src/include" Vulkan::Headers)
 
+message(${Vulkan_INCLUDE_DIRS})
+
 file(GLOB GENERAL_SOURCES    
     "src/lib/*.cpp"  
     "src/lib/*.hpp"  
@@ -152,3 +154,4 @@ macro(CREATE_VULKAN_EXECUTABLE target)
 endmacro()
 
 CREATE_VULKAN_EXECUTABLE(BasicVulkan)
+CREATE_VULKAN_EXECUTABLE(Assign01)
