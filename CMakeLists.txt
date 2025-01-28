@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.24) 
 project(CS_450_Assignments)
-
 set(CMAKE_INSTALL_PREFIX .)
+
+# Comment out this line if it creates problems
+set(CMAKE_PREFIX_PATH "D:/Software/Windows/VulkanSDK/1.4.304.0")
 
 #####################################
 # Require C++17
