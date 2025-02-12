@@ -5,7 +5,21 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include "VKUtility.hpp"
+#include "VKBuffer.hpp"
 using namespace std;
+
+struct PointVertex {
+    glm::vec3 pos;
+};
+
+vector<PointVertex> vertices = {
+    {{-0.5f, -0.5f, 0.5f}},
+    {{ 0.5f, -0.5f, 0.5f}},
+    {{ 0.5f,  0.5f, 0.5f}},
+    {{-0.5f,  0.5f, 0.5f}}
+};
+
+vector<unsigned int> indices = { 0, 2, 1, 2, 0, 3};
 
 int main(int argc, char **argv) {
 
@@ -119,6 +133,70 @@ int main(int argc, char **argv) {
         "build/compiledshaders/ProfExercises03/shader.vert.spv");
     auto fragSrc = readBinaryFile(
         "build/compiledshaders/ProfExercises03/shader.frag.spv");
+
+    vk::ShaderModule vertShader = createVulkanShaderModule(device, vertSrc);
+    vk::ShaderModule fragShader = createVulkanShaderModule(device, fragSrc);
+
+    vk::PipelineShaderStageCreateInfo shaderStages[] = {
+        vk::PipelineShaderStageCreateInfo(
+            {}, vk::ShaderStageFlagBits::eVertex, vertShader, "main"
+        ),
+        vk::PipelineShaderStageCreateInfo(
+            {}, vk::ShaderStageFlagBits::eFragment, fragShader, "main"
+        )
+    };
+
+    vk::DeviceSize vertBufferSize = sizeof(vertices[0])*vertices.size();
+    vk::DeviceSize indBufferSize = sizeof(indices[0])*indices.size();
+
+    VulkanBuffer vkVertices
+         = createVulkanBuffer(
+                phyDevice, device,
+                vertBufferSize, 
+                vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible
+                | vk::MemoryPropertyFlagBits::eHostCoherent);
+    VulkanBuffer vkIndices
+         = createVulkanBuffer(
+                phyDevice, device,
+                indBufferSize, 
+                vk::BufferUsageFlagBits::eIndexBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible
+                | vk::MemoryPropertyFlagBits::eHostCoherent);
+    
+    copyDataToVulkanBuffer( device, 
+                            vkVertices.memory, 
+                            vertBufferSize,
+                            vertices.data());
+    copyDataToVulkanBuffer( device, 
+                            vkIndices.memory, 
+                            indBufferSize,
+                            indices.data());
+
+    vk::VertexInputBindingDescription vertBindDesc 
+        = vk::VertexInputBindingDescription(
+            0, sizeof(vertices[0]), vk::VertexInputRate::eVertex);
+
+    vector<vk::VertexInputAttributeDescription> vertAttribDesc 
+        = {
+            vk::VertexInputAttributeDescription(
+                0, 0, 
+                vk::Format::eR32G32B32Sfloat,
+                offsetof(PointVertex, pos))
+        };
+    
+    vk::PipelineVertexInputStateCreateInfo vertexInputInfo(
+        {}, vertBindDesc, vertAttribDesc
+    );
+
+    vk::PipelineInputAssemblyStateCreateInfo inputAssembly(
+        {}, vk::PrimitiveTopology::eTriangleList, false
+    );
+
+    
+                
+     
+    
         
     // CREATION TODO
 
