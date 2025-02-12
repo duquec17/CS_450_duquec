@@ -207,6 +207,9 @@ int main(int argc, char **argv) {
     }
 
     // CLEANUP TODO
+    cleanupVulkanBuffer(device, vkIndices);
+    cleanupVulkanBuffer(device, vkVertices);
+
     device.destroyRenderPass(pass);
     for(int i = 0; i < swapviews.size(); i++) {
         device.destroyImageView(swapviews.at(i));
