@@ -193,9 +193,14 @@ int main(int argc, char **argv) {
         {}, vk::PrimitiveTopology::eTriangleList, false
     );
 
-    
-                
-     
+    // Pipeline TODO
+
+
+    vk::Viewport viewport(
+        0,0, (float)swapextent.width, (float)swapextent.height,
+        0.0f, 1.0f
+    );
+    vk::Rect2D scissors({0,0}, swapextent);
     
         
     // CREATION TODO
