@@ -268,16 +268,83 @@ int main(int argc, char **argv) {
     
     device.destroyShaderModule(vertShader);
     device.destroyShaderModule(fragShader);     
-     
+    
+    vector<vk::Framebuffer> framebuffers;
+    framebuffers.resize(swapviews.size());
+    for(int i = 0; i < framebuffers.size(); i++)
+    {
+        vector<vk::ImageView> attach = {
+            swapviews.at(i)
+        };
+        framebuffers[i] = device.createFramebuffer(
+            vk::FramebufferCreateInfo(
+                {},
+                pass,
+                attach,
+                swapextent.width,
+                swapextent.height,
+                1
+            )
+        );
+    }
+
+    vk::CommandPool VkCommandPool
+    = device.createCommandPool(
+        vk::CommandPoolCreateInfo(
+        vk::CommandPoolCreateFlags(
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer
+        ),
+        graphIndex
+        )
+    );
+
+    vk::CommandBuffer commandBuffer
+      = device.allocateCommandBuffers(
+        vk::CommandBufferAllocateInfo(
+            VkCommandPool,
+            vk::CommandBufferLevel::ePrimary,
+            1
+        )
+      ).front();
+
+    vk::Fence inFlightFence
+        = device.createFence(
+            vk::FenceCreateInfo(
+                vk::FenceCreateFlagBits::eSignaled)
+    );
+
+
+
+
     // CREATION TODO
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
+        device.waitForFences(1, &inFlightFence, true, 
+                                        UINT64_MAX);
+        device.resetFences(1, &inFlightFence);
+
+        auto result = device.acquireNextImageKHR(
+            swapchain, UINT64_MAX,
+            imageSem, nullptr
+        );
+
+        unsigned int frameIndex = result.value;
+
         // RENDER TODO
     }
 
     // CLEANUP TODO
+    // device.destroySemaphor(imageSem);
+    device.destroyCommandPool(VkCommandPool);
+    
+    
+    for(auto framebuffer: framebuffers) {
+        device.destroyFramebuffer(framebuffer);
+    }
+    framebuffers.clear();
+
     device.destroyPipelineCache(pipelineCache);
     device.destroyPipelineLayout(pipelineLayout);
     device.destroyPipeline(graphicsPipeline);
