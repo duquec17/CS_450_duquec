@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 
     vk::SwapchainKHR swapchain
         = vk::SwapchainKHR { vkbSwapchain.swapchain };
-    vk::Format swapformat { vkbSwapchain.image_format };
+    vk::Format swapformat = vk::Format(vkbSwapchain.image_format);
     vk::Extent2D swapextent { vkbSwapchain.extent };
     vector<VkImageView> oldViews
         = vkbSwapchain.get_image_views().value();
@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
         commandBuffer.setScissor(0, scissors);  
 
         // RENDER TODO
-        
+
 
         commandBuffer.endRenderPass();
         commandBuffer.end();
