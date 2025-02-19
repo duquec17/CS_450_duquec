@@ -371,7 +371,17 @@ int main(int argc, char **argv) {
         commandBuffer.setScissor(0, scissors);  
 
         // RENDER TODO
-        
+        vk::Buffer vertBuffers[] = {vkVertices.buffer};
+        vk::DeviceSize offsets[] = {0};
+        commandBuffer.bindVertexBuffers(
+            0, vertBuffers, offsets);
+
+        commandBuffer.bindIndexBuffer(
+            vkIndices.buffer, 0, 
+            vk::IndexType::eUint32);
+
+        commandBuffer.drawIndexed(
+            indices.size(), 1,0,0,0);
 
         commandBuffer.endRenderPass();
         commandBuffer.end();
