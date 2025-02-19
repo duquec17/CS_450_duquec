@@ -193,16 +193,82 @@ int main(int argc, char **argv) {
         {}, vk::PrimitiveTopology::eTriangleList, false
     );
 
-    // Pipeline TODO
-
-
     vk::Viewport viewport(
-        0,0, (float)swapextent.width, (float)swapextent.height,
+        0, 0, (float)swapextent.width, (float)swapextent.height,
         0.0f, 1.0f
     );
     vk::Rect2D scissors({0,0}, swapextent);
+    vk::PipelineViewportStateCreateInfo viewportInfo(
+        {}, viewport, scissors
+    );
+
+    vector<vk::DynamicState> dynamicStates = {
+        vk::DynamicState::eViewport,
+        vk::DynamicState::eScissor
+    };
+    vk::PipelineDynamicStateCreateInfo dynamicInfo(
+        {}, dynamicStates
+    );
+
+    vk::PipelineRasterizationStateCreateInfo
+        rasterizer {};
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode
+     = vk::CullModeFlagBits::eNone;
+    rasterizer.frontFace
+     = vk::FrontFace::eCounterClockwise;
+
+    vk::PipelineColorBlendAttachmentState colorBlend {};
+    colorBlend.colorWriteMask = 
+        vk::ColorComponentFlagBits::eR |
+        vk::ColorComponentFlagBits::eG |
+        vk::ColorComponentFlagBits::eB |
+        vk::ColorComponentFlagBits::eA;
+    vk::PipelineColorBlendStateCreateInfo colorBlending(
+        {}, false, vk::LogicOp::eCopy, colorBlend
+    );
     
-        
+    vk::PipelineDepthStencilStateCreateInfo depthStencil (
+        {}, true, true, vk::CompareOp::eLess,
+        false, false, {}, {}
+    );
+
+    vk::PipelineLayoutCreateInfo layoutInfo(
+        {}, {}, {}
+    );
+    vk::PipelineLayout pipelineLayout
+    = device.createPipelineLayout(layoutInfo);
+
+    vk::PipelineMultisampleStateCreateInfo multisample(
+        {}, vk::SampleCountFlagBits::e1
+    );
+
+    vk::PipelineCache pipelineCache
+    = device.createPipelineCache({});
+
+    vk::GraphicsPipelineCreateInfo pipelineInfo(
+        vk::PipelineCreateFlags(),
+        shaderStages,
+        &vertexInputInfo,
+        &inputAssembly,
+        0,
+        &viewportInfo,
+        &rasterizer,
+        &multisample,
+        &depthStencil,
+        &colorBlending,
+        &dynamicInfo,
+        pipelineLayout,
+        pass
+    );
+    auto pipeRet = device.createGraphicsPipeline(
+        pipelineCache, pipelineInfo
+    );
+    vk::Pipeline graphicsPipeline = pipeRet.value;
+    
+    device.destroyShaderModule(vertShader);
+    device.destroyShaderModule(fragShader);     
+     
     // CREATION TODO
 
     while(!glfwWindowShouldClose(window)) {
@@ -212,6 +278,9 @@ int main(int argc, char **argv) {
     }
 
     // CLEANUP TODO
+    device.destroyPipelineCache(pipelineCache);
+    device.destroyPipelineLayout(pipelineLayout);
+    device.destroyPipeline(graphicsPipeline);
     cleanupVulkanBuffer(device, vkIndices);
     cleanupVulkanBuffer(device, vkVertices);
 
