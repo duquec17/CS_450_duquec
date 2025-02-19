@@ -267,17 +267,151 @@ int main(int argc, char **argv) {
     vk::Pipeline graphicsPipeline = pipeRet.value;
     
     device.destroyShaderModule(vertShader);
-    device.destroyShaderModule(fragShader);     
+    device.destroyShaderModule(fragShader);   
+
+    vector<vk::Framebuffer> framebuffers;
+    framebuffers.resize(swapviews.size());
+    for(int i = 0; i < framebuffers.size(); i++) {
+        vector<vk::ImageView> attach = {
+            swapviews.at(i)
+        };
+        framebuffers[i] = device.createFramebuffer(
+            vk::FramebufferCreateInfo(
+                {},
+                pass,
+                attach,
+                swapextent.width,
+                swapextent.height,
+                1
+            )
+        );
+    }  
+
+    vk::CommandPool commandPool 
+     = device.createCommandPool(
+        vk::CommandPoolCreateInfo(
+        vk::CommandPoolCreateFlags(
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer
+        ),
+        graphIndex
+        )
+     );
+
+    vk::CommandBuffer commandBuffer
+      = device.allocateCommandBuffers(
+        vk::CommandBufferAllocateInfo(
+            commandPool,
+            vk::CommandBufferLevel::ePrimary,
+            1
+        )
+    ).front();
+
+    vk::Fence inFlightFence
+    = device.createFence(
+        vk::FenceCreateInfo(
+            vk::FenceCreateFlagBits::eSignaled)
+    );
+
+    vk::Semaphore imageSem 
+    = device.createSemaphore(vk::SemaphoreCreateInfo());
+    vk::Semaphore renderSem 
+    = device.createSemaphore(vk::SemaphoreCreateInfo());
+    
+
      
     // CREATION TODO
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
+        device.waitForFences(1, &inFlightFence, 
+                            true, UINT64_MAX);
+        device.resetFences(1, &inFlightFence);
+
+        auto result = device.acquireNextImageKHR(
+            swapchain, UINT64_MAX, 
+            imageSem, nullptr
+        );
+
+        unsigned int frameIndex = result.value;
+
+        commandBuffer.reset();
+        commandBuffer.begin(vk::CommandBufferBeginInfo());
+        array<vk::ClearValue, 1> clearValues {};
+        clearValues[0].color
+         = vk::ClearColorValue(0.9f, 0.9f, 0.0f, 1.0f);
+
+        commandBuffer.beginRenderPass(
+            vk::RenderPassBeginInfo(
+                pass, framebuffers[frameIndex],
+                { {0,0}, swapextent},
+                clearValues
+            ),
+            vk::SubpassContents::eInline
+        );
+
+        commandBuffer.bindPipeline(
+            vk::PipelineBindPoint::eGraphics,
+            graphicsPipeline
+        );
+
+        vk::Viewport viewports[] =
+        {
+            {0,0,
+            (float)swapextent.width,
+            (float)swapextent.height,
+            0.0f, 1.0f}
+        };
+        commandBuffer.setViewport(0, viewports);
+
+        vk::Rect2D scissors[] =
+        {
+            {{0,0}, swapextent}
+        };
+        commandBuffer.setScissor(0, scissors);  
+
         // RENDER TODO
+        
+
+        commandBuffer.endRenderPass();
+        commandBuffer.end();
+
+        vk::Semaphore waitList[] = {imageSem};
+        vk::Semaphore sigList[] = {renderSem};
+
+        vk::PipelineStageFlags waitStages[]
+        = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+
+        vk::SubmitInfo submitInfo(
+            waitList, 
+            waitStages,
+            commandBuffer,
+            sigList
+        );
+
+        graphQueue.submit(submitInfo, inFlightFence);
+
+        vk::SwapchainKHR swapchains[] = {swapchain};
+        uint32_t imageIndices[] = {frameIndex};
+        vk::PresentInfoKHR presentInfo(
+            sigList,
+            swapchains,
+            imageIndices
+        );
+
+        presentQueue.presentKHR(presentInfo);
     }
 
     // CLEANUP TODO
+    device.destroySemaphore(imageSem);
+    device.destroySemaphore(renderSem);
+    device.destroyFence(inFlightFence);
+    device.destroyCommandPool(commandPool);
+    for(auto framebuffer: framebuffers) {
+        device.destroyFramebuffer(framebuffer);
+    }
+    framebuffers.clear();
+
     device.destroyPipelineCache(pipelineCache);
     device.destroyPipelineLayout(pipelineLayout);
     device.destroyPipeline(graphicsPipeline);
