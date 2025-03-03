@@ -51,6 +51,49 @@ static void key_callback(GLFWwindow *window,
         if(key == GLFW_KEY_ESCAPE) {
             glfwSetWindowShouldClose(window, true);
         }
+        else if(key == GLFW_KEY_SPACE) {
+            modelMat = glm::mat4(1.0);
+            transformString = "v";
+        }
+        else if(key == GLFW_KEY_Q) {
+            modelMat = glm::rotate(
+                glm::radians(5.0f),
+                glm::vec3(0,0,1))*modelMat;
+            transformString = "R(5)*" + transformString;
+        }
+        else if(key == GLFW_KEY_E) {
+            modelMat = glm::rotate(
+                glm::radians(-5.0f),
+                glm::vec3(0,0,1))*modelMat;
+            transformString = "R(-5)*" + transformString;
+        }
+        else if(key == GLFW_KEY_F) {
+            modelMat = glm::scale(
+                glm::vec3(0.8, 1, 1)
+            )*modelMat;
+            transformString = "S(0.8x)*" + transformString;
+        }
+        else if(key == GLFW_KEY_G) {
+            modelMat = glm::scale(
+                glm::vec3(1.25, 1, 1)
+            )*modelMat;
+            transformString = "S(1.25x)*" + transformString;
+        }
+        else if(key == GLFW_KEY_W) {
+            modelMat = glm::translate(
+                glm::vec3(0, 0.1, 0)
+            )*modelMat;
+            transformString = "T(y+0.1)*" + transformString;
+        }
+        else if(key == GLFW_KEY_S) {
+            modelMat = glm::translate(
+                glm::vec3(0, -0.1, 0)
+            )*modelMat;
+            transformString = "T(y-0.1)*" + transformString;
+        }
+
+
+        //cout << transformString << endl;
     }
 }
 
