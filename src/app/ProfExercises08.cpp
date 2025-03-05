@@ -31,6 +31,13 @@ struct UniformPush {
     alignas(16) glm::mat4 modelMat;
 };
 
+struct UBOVertex {
+    alignas(16) glm::mat4 viewMat;
+    alignas(16) glm::mat4 projMat;
+};
+
+UBOVertex uboVertHost;
+
 glm::mat4 modelMat(1.0f);
 string transformString = "v";
 
@@ -327,6 +334,8 @@ int main(int argc, char **argv) {
         {vk::ShaderStageFlagBits::eVertex,
         0, sizeof(UniformPush)}
     };
+
+    UBOData 
 
     vk::PipelineLayoutCreateInfo layoutInfo(
         {}, {}, pushRanges
