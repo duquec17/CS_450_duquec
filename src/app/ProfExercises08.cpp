@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include "VKUtility.hpp"
 #include "VKBuffer.hpp"
+#include "VKUniform.hpp"
 #include "glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/string_cast.hpp"
@@ -335,7 +336,7 @@ int main(int argc, char **argv) {
         0, sizeof(UniformPush)}
     };
 
-    UBOData 
+     
 
     vk::PipelineLayoutCreateInfo layoutInfo(
         {}, {}, pushRanges
