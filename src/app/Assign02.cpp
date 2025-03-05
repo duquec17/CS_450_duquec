@@ -1,6 +1,46 @@
 #include "VKSetup.hpp"
 #include "VKRender.hpp"
 #include "VKImage.hpp"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include "MeshData.hpp"
+
+// Hold information for a vertex
+struct Vertex {
+    glm::vec3 pos;
+    glm::vec4 color;
+};
+
+// Hold scene data
+struct SceneData {
+    vector<VulkanMesh>allMeshes;
+    const aiScene *scene=nullptr;
+};
+
+// Global instance of struct
+SceneData sceneData;
+
+// New class that inherits from VlkrEngine
+class Assign02RenderEngine : public VulkanRenderEngine{
+    // Constructor
+    public: 
+        Assign02RenderEngine(VulkanInitData &vkInitData): 
+        VulkanRenderEngine(vkInitData){};
+    
+    // Overrides initialize function
+    virtual bool initialize(VulkanInitRenderParams *params) override {
+        if(!VulkanRenderEngine::initialize(params)){return false;}
+        return true;
+    };
+
+    // Destructor
+    virtual~Assign02RenderEngine(){};
+
+    // Override CommandBuffer function
+    virtual void recordCommandBuffer(void *userData, vk::CommandBuffer &commandBuffer, unsigned int frameIndex) override;
+};
+
 
 int main(int argc, char **argv) {
     cout << "BEGIN 2nd FORGING!!!" << endl;
