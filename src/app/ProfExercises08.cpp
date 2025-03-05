@@ -336,10 +336,64 @@ int main(int argc, char **argv) {
         0, sizeof(UniformPush)}
     };
 
-     
+    UBOData uboVertData = createVulkanUniformBufferData(
+        device, phyDevice, sizeof(UBOVertex), 1
+    ); 
+
+    vector<vk::DescriptorSetLayoutBinding> allBinds = {
+        vk::DescriptorSetLayoutBinding(
+            0, vk::DescriptorType::eUniformBuffer,
+            1, vk::ShaderStageFlagBits::eVertex
+        )
+    };
+
+    vk::DescriptorSetLayout descSetLayout = 
+        device.createDescriptorSetLayout(
+            vk::DescriptorSetLayoutCreateInfo(
+                {}, allBinds));
+
+    vector<vk::DescriptorPoolSize> poolSizes = {
+        vk::DescriptorPoolSize(
+            vk::DescriptorType::eUniformBuffer,
+            1
+        )
+    };
+
+    vk::DescriptorPool descPool 
+    = device.createDescriptorPool(
+        vk::DescriptorPoolCreateInfo()
+            .setPoolSizes(poolSizes)
+            .setMaxSets(1)
+    );
+
+    vector<vk::DescriptorSet> descSets
+    = device.allocateDescriptorSets(
+        vk::DescriptorSetAllocateInfo()
+            .setDescriptorPool(descPool)
+            .setDescriptorSetCount(1)
+            .setSetLayouts({descSetLayout})
+    );
+
+    vk::DescriptorBufferInfo descBufferInfo
+    = vk::DescriptorBufferInfo()
+        .setBuffer(uboVertData.bufferData[0].buffer)
+        .setOffset(0)
+        .setRange(sizeof(UBOVertex));
+
+    vk::WriteDescriptorSet writeInfo
+    = vk::WriteDescriptorSet()
+        .setDstSet(descSets[0])
+        .setDstBinding(0)
+        .setDstArrayElement(0)
+        .setDescriptorType(
+            vk::DescriptorType::eUniformBuffer)
+        .setDescriptorCount(1)
+        .setBufferInfo(descBufferInfo);
+
+    device.updateDescriptorSets({writeInfo}, {});
 
     vk::PipelineLayoutCreateInfo layoutInfo(
-        {}, {}, pushRanges
+        {}, {descSetLayout}, pushRanges
     );
     vk::PipelineLayout pipelineLayout
     = device.createPipelineLayout(layoutInfo);
@@ -485,6 +539,18 @@ int main(int argc, char **argv) {
             &ub
         );
 
+        uboVertHost.viewMat = glm::mat4(1.0);
+        uboVertHost.projMat = glm::mat4(1.0);
+        //uboVertHost.viewMat[0][0] = 2.0f;
+
+        memcpy(uboVertData.mapped[0],
+            &uboVertHost, sizeof(UBOVertex));
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics,
+            pipelineLayout,
+            0, descSets[0], {}
+        );
+
         // RENDER
         vk::Buffer vertBuffers[] = {vkVertices.buffer};
         vk::DeviceSize offsets[] = {0};
@@ -529,6 +595,8 @@ int main(int argc, char **argv) {
     }
 
     // CLEANUP TODO
+    device.destroyDescriptorPool(descPool);
+    cleanupVulkanUniformBufferData(device, uboVertData);
     device.destroySemaphore(imageSem);
     device.destroySemaphore(renderSem);
     device.destroyFence(inFlightFence);

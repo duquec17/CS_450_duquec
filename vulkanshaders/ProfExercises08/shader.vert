@@ -13,7 +13,7 @@ layout(set=0, binding=0) uniform UBOVertex {
 
 void main() {
     vec4 pos = vec4(position, 1.0);
-    pos = pc.modelMat*pos;
+    pos = ubo.projMat*ubo.viewMat*pc.modelMat*pos;
 
     gl_Position = pos;  
 } 
