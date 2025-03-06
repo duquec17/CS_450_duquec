@@ -90,6 +90,9 @@ class Assign02RenderEngine : public VulkanRenderEngine{
     };
 };
 
+void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
+    
+}
 
 int main(int argc, char **argv) {
     cout << "BEGIN 2nd FORGING!!!" << endl;
