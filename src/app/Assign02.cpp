@@ -38,7 +38,13 @@ class Assign02RenderEngine : public VulkanRenderEngine{
     virtual~Assign02RenderEngine(){};
 
     // Override CommandBuffer function
-    virtual void recordCommandBuffer(void *userData, vk::CommandBuffer &commandBuffer, unsigned int frameIndex) override;
+    virtual void recordCommandBuffer(void *userData, vk::CommandBuffer &commandBuffer, unsigned int frameIndex) override {
+        SceneData *sceneData = static_cast<SceneData*>(userData);
+
+        for (int i = 0; i <= 5; i++){
+
+        }
+    };
 };
 
 
