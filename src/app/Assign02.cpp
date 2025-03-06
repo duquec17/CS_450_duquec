@@ -91,7 +91,30 @@ class Assign02RenderEngine : public VulkanRenderEngine{
 };
 
 void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
-    
+    // Clear out the mesh's vertices and indices
+    m.vertices.clear();
+    m.indices.clear();
+
+    // Loop through all vertices in the aiMesh
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+        // Create vertex
+        Vertex vertex;
+
+        // Grab the vertex position information from mesh and store it in the vertex's position
+        vertex.pos = glm::vec3(
+            mesh->mVertices[i].x,
+            mesh->mVertices[i].y,
+            mesh->mVertices[i].z
+        );
+
+        //Set the color of the vertex to any color other than (0,0,1) or the background
+        vertex.color = glm::vec4(
+            (float)(i % 256) / 255.0f, // Red
+            (float)((i / 256) % 256) / 255.0f, // Green
+            0.5f, // Blue
+            1.0f // Alpha
+        );
+    }
 }
 
 int main(int argc, char **argv) {
