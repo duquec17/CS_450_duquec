@@ -24,10 +24,10 @@ SceneData sceneData;
 // New class that inherits from VlkrEngine
 class Assign02RenderEngine : public VulkanRenderEngine{
     // Constructor
-    public: 
-        Assign02RenderEngine(VulkanInitData &vkInitData): 
+    public:
+        Assign02RenderEngine(VulkanInitData &vkInitData):
         VulkanRenderEngine(vkInitData){};
-    
+
     // Overrides initialize function
     virtual bool initialize(VulkanInitRenderParams *params) override {
         if(!VulkanRenderEngine::initialize(params)){return false;}
@@ -38,8 +38,8 @@ class Assign02RenderEngine : public VulkanRenderEngine{
     virtual~Assign02RenderEngine(){};
 
     /// Override recordCommandBuffer function
-    virtual void recordCommandBuffer(void *userData, 
-                                     vk::CommandBuffer &commandBuffer, 
+    virtual void recordCommandBuffer(void *userData,
+                                     vk::CommandBuffer &commandBuffer,
                                      unsigned int frameIndex) override {
         // Void data is assumed to be vector of meshes only
         vector<VulkanMesh> *allMeshes = static_cast<vector<VulkanMesh>*>(userData);
@@ -57,34 +57,34 @@ class Assign02RenderEngine : public VulkanRenderEngine{
         array<vk::ClearValue, 2> clearValues {};
         clearValues[0].color = vk::ClearColorValue(0.6f, 0.1f, 0.7f, 1.0f);
         clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0.0f);
-    
+
         commandBuffer.beginRenderPass(vk::RenderPassBeginInfo(
-            this->renderPass, 
-            this->framebuffers[frameIndex], 
+            this->renderPass,
+            this->framebuffers[frameIndex],
             { {0,0}, extent },
             clearValues),
             vk::SubpassContents::eInline);
-    
+
         // Bind pipeline
         commandBuffer.bindPipeline(
-            vk::PipelineBindPoint::eGraphics, 
+            vk::PipelineBindPoint::eGraphics,
             this->pipelineData.graphicsPipeline);
 
         // Set up viewport and scissors
         vk::Viewport viewports[] = {{0, 0, (float)extent.width, (float)extent.height, 0.0f, 1.0f}};
         commandBuffer.setViewport(0, viewports);
-    
+
         vk::Rect2D scissors[] = {{{0,0}, extent}};
         commandBuffer.setScissor(0, scissors);
-    
+
         // Loopthrough and record on each mesh in sceneData->allMeshes
         for (auto& mesh : sceneData->allMeshes) {
             recordDrawVulkanMesh(commandBuffer, allMeshes->at(0));
         }
-    
+
         // Stop render pass
         commandBuffer.endRenderPass();
-    
+
         // End command buffer
         commandBuffer.end();
     };
@@ -114,6 +114,20 @@ void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
             0.5f, // Blue
             1.0f // Alpha
         );
+
+        // Add the vertex to the mesh's vertices list
+        m.vertices.push_back(vertex);
+    }
+
+    // Loop through all faces in the aiMesh
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+        // Grab the aiFace face from the mesh
+        aiFace &face = mesh->mFaces[i];
+
+        //Loop through the number of indices for this face
+        for (unsigned int k = 0; k < face.mNumIndices; k++) {
+            m.indices.push_back(face.mIndices[k]);
+        }
     }
 }
 
@@ -134,16 +148,16 @@ int main(int argc, char **argv) {
     initVulkanBootstrap(appName, window, vkInitData);
 
     // Setup basic forward rendering process
-    string vertSPVFilename = "build/compiledshaders/" + appName + "/shader.vert.spv";                                                    
+    string vertSPVFilename = "build/compiledshaders/" + appName + "/shader.vert.spv";
     string fragSPVFilename = "build/compiledshaders/" + appName + "/shader.frag.spv";
-    
+
     // Create render engine
     VulkanInitRenderParams params = {
         vertSPVFilename, fragSPVFilename
-    };    
+    };
     VulkanRenderEngine *renderEngine = new VulkanRenderEngine(  vkInitData);
     renderEngine->initialize(&params);
-    
+
     // Create very simple quad on host
     Mesh<SimpleVertex> hostMesh = {
         {
@@ -154,9 +168,9 @@ int main(int argc, char **argv) {
         },
         { 0, 2, 1, 2, 0, 3 }
     };
-    
+
     // Create Vulkan mesh
-    VulkanMesh mesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), hostMesh); 
+    VulkanMesh mesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), hostMesh);
     vector<VulkanMesh> allMeshes {
         { mesh }
     };
@@ -165,17 +179,17 @@ int main(int argc, char **argv) {
     int framesRendered = 0;
     auto startCountTime = getTime();
     float fpsCalcWindow = 5.0f;
-                                       
+
     // Main render loop
     while (!glfwWindowShouldClose(window)) {
-        // Get start time        
+        // Get start time
         auto startTime = getTime();
 
         // Poll events for window
-        glfwPollEvents();  
+        glfwPollEvents();
 
         // Draw frame
-        renderEngine->drawFrame(&allMeshes);  
+        renderEngine->drawFrame(&allMeshes);
 
         // Increment frame count
         framesRendered++;
@@ -183,7 +197,7 @@ int main(int argc, char **argv) {
         // Get end and elapsed
         auto endTime = getTime();
         float frameTime = getElapsedSeconds(startTime, endTime);
-        
+
         float timeSoFar = getElapsedSeconds(startCountTime, getTime());
 
         if(timeSoFar >= fpsCalcWindow) {
@@ -192,18 +206,18 @@ int main(int argc, char **argv) {
 
             startCountTime = getTime();
             framesRendered = 0;
-        }        
+        }
     }
-        
+
     // Make sure all queues on GPU are done
     vkInitData.device.waitIdle();
-    
-    // Cleanup  
+
+    // Cleanup
     cleanupVulkanMesh(vkInitData, mesh);
     delete renderEngine;
     cleanupVulkanBootstrap(vkInitData);
     cleanupGLFWWindow(window);
-    
+
     cout << "FORGING DONE!!!" << endl;
     return 0;
 }
