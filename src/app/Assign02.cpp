@@ -132,7 +132,33 @@ void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
 }
 
 int main(int argc, char **argv) {
-    cout << "BEGIN 2nd FORGING!!!" << endl;
+    cout << "BEGIN Model FORGING!!!" << endl;
+
+    // The model to load will be provided on the command line
+    // Use sampleModels sphere as default model path
+    string modelPath = "sampleModels/sphere.obj";
+    if (argc >= 2){
+        modelPath = string(argv[1]);
+    }
+
+    Assimp::Importer importer;
+
+    // Load the model using Assimp to get an aiScene
+    const aiScene* scene = importer.ReadFile(
+                                  modelPath,
+                                  aiProcess_Triangulate |
+                                  aiProcess_FlipUVs |
+                                  aiProcess_GenNormals |
+                                  aiProcess_JoinIdenticalVertices);
+
+    // Check to make sure the model loaded correctly
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode){
+        cerr << "Error loading model: " << importer.GetErrorString() << endl;
+        return -1;
+    }
+
+    // Print success msg
+    cout << "Model loaded successfully" << endl;
 
     // Set name
     string appName = "Assign02";
@@ -155,10 +181,11 @@ int main(int argc, char **argv) {
     VulkanInitRenderParams params = {
         vertSPVFilename, fragSPVFilename
     };
-    VulkanRenderEngine *renderEngine = new VulkanRenderEngine(  vkInitData);
+    VulkanRenderEngine *renderEngine = new Assign02RenderEngine(vkInitData);
     renderEngine->initialize(&params);
 
-    // Create very simple quad on host
+    /* Comment out the current code that creates hostMesh, VulkanMesh, & list
+    // Create very simple quad on host    
     Mesh<SimpleVertex> hostMesh = {
         {
             {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
@@ -174,6 +201,7 @@ int main(int argc, char **argv) {
     vector<VulkanMesh> allMeshes {
         { mesh }
     };
+    */
 
     float timeElapsed = 1.0f;
     int framesRendered = 0;
