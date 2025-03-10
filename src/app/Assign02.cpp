@@ -181,8 +181,22 @@ int main(int argc, char **argv) {
     VulkanInitRenderParams params = {
         vertSPVFilename, fragSPVFilename
     };
+
+    // Before your drawing loop
     VulkanRenderEngine *renderEngine = new Assign02RenderEngine(vkInitData);
     renderEngine->initialize(&params);
+
+    VulkanMesh vulkanMesh;
+
+    // Create a mesh vertex obj. inside the loop
+    for (unsigned int i = 0; i < sceneData.scene->mNumMeshes; i++) {
+        aiMesh *aiMesh = sceneData.scene->mMeshes[i];
+        Mesh<Vertex> mesh;
+        extractMeshData(aiMesh, mesh);
+
+        vulkanMesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), mesh);
+        sceneData.allMeshes.push_back(vulkanMesh);
+    }
 
     /* Comment out the current code that creates hostMesh, VulkanMesh, & list
     // Create very simple quad on host    
@@ -217,7 +231,7 @@ int main(int argc, char **argv) {
         glfwPollEvents();
 
         // Draw frame
-        renderEngine->drawFrame(&allMeshes);
+        renderEngine->drawFrame(&sceneData);
 
         // Increment frame count
         framesRendered++;
@@ -240,8 +254,13 @@ int main(int argc, char **argv) {
     // Make sure all queues on GPU are done
     vkInitData.device.waitIdle();
 
-    // Cleanup
-    cleanupVulkanMesh(vkInitData, mesh);
+    // Cleanup & After drawing loop
+    //cleanupVulkanMesh(vkInitData, mesh);
+    for (auto &VulkanMesh : sceneData.allMeshes) {
+        cleanupVulkanMesh(vkInitData, vulkanMesh);
+    }
+    sceneData.allMeshes.clear();
+
     delete renderEngine;
     cleanupVulkanBootstrap(vkInitData);
     cleanupGLFWWindow(window);
