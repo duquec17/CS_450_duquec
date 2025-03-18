@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     Assimp::Importer importer;
 
     // Load the model using Assimp to get an aiScene
-    const aiScene* scene = importer.ReadFile(
+    sceneData.scene = importer.ReadFile(
                                   modelPath,
                                   aiProcess_Triangulate |
                                   aiProcess_FlipUVs |
@@ -152,13 +152,13 @@ int main(int argc, char **argv) {
                                   aiProcess_JoinIdenticalVertices);
 
     // Check to make sure the model loaded correctly
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode){
+    if (!sceneData.scene || sceneData.scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !sceneData.scene->mRootNode){
         cerr << "Error loading model: " << importer.GetErrorString() << endl;
         return -1;
     }
 
     // Print success msg
-    cout << "Model loaded successfully" << endl;
+    cout << "Model loaded successfully" << modelPath << endl;
 
     // Set name
     string appName = "Assign02";
