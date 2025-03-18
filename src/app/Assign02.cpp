@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 
     // The model to load will be provided on the command line
     // Use sampleModels sphere as default model path
-    string modelPath = "sampleModels/sphere.obj";
+    string modelPath = "sampleModels/teapot.obj";
     if (argc >= 2){
         modelPath = string(argv[1]);
     }
