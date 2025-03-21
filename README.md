@@ -1,6 +1,6 @@
 # CS 450 (Computer Graphics)
 ***Spring 2025***  
-***Author: <Your Name Here>***  
+***Author: Cristian Duque***  
 ***Original Author: Dr. Michael J. Reale***  
 ***SUNY Polytechnic Institute*** 
 
