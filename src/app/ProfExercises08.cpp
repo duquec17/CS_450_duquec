@@ -351,6 +351,9 @@ int main(int argc, char **argv) {
         device.createDescriptorSetLayout(
             vk::DescriptorSetLayoutCreateInfo(
                 {}, allBinds));
+    vector<vk::DescriptorSetLayout> allDescSetLayouts = {
+        descSetLayout
+    };
 
     vector<vk::DescriptorPoolSize> poolSizes = {
         vk::DescriptorPoolSize(
@@ -371,7 +374,7 @@ int main(int argc, char **argv) {
         vk::DescriptorSetAllocateInfo()
             .setDescriptorPool(descPool)
             .setDescriptorSetCount(1)
-            .setSetLayouts({descSetLayout})
+            .setSetLayouts(allDescSetLayouts)
     );
 
     vk::DescriptorBufferInfo descBufferInfo
@@ -393,7 +396,7 @@ int main(int argc, char **argv) {
     device.updateDescriptorSets({writeInfo}, {});
 
     vk::PipelineLayoutCreateInfo layoutInfo(
-        {}, {descSetLayout}, pushRanges
+        {}, allDescSetLayouts, pushRanges
     );
     vk::PipelineLayout pipelineLayout
     = device.createPipelineLayout(layoutInfo);
@@ -595,6 +598,12 @@ int main(int argc, char **argv) {
     }
 
     // CLEANUP TODO
+    for(int i = 0; i < allDescSetLayouts.size(); i++) {
+        device.destroyDescriptorSetLayout(
+            allDescSetLayouts.at(i));
+    }
+    allDescSetLayouts.clear();
+
     device.destroyDescriptorPool(descPool);
     cleanupVulkanUniformBufferData(device, uboVertData);
     device.destroySemaphore(imageSem);
