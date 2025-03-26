@@ -25,6 +25,12 @@ find_package(Vulkan REQUIRED)
 find_package(Threads REQUIRED)
 
 #####################################
+# Threads
+#####################################
+
+find_package(Threads REQUIRED)
+
+#####################################
 # GLFW
 #####################################
 
@@ -63,7 +69,7 @@ if(NOT glm_FOUND)
         GIT_SHALLOW 1
     )    
     FetchContent_MakeAvailable(glm)
-    set(glfw3_VERSION "1.0.1")
+    set(glm_VERSION "1.0.1")
 else()
     message("GLM already installed on system...")
 endif()
@@ -179,7 +185,7 @@ endmacro()
 
 set(ALL_LIBRARIES 
     Vulkan::Vulkan    
-    glfw
+    glfw 
     glm::glm  
     assimp::assimp
     vk-bootstrap::vk-bootstrap
