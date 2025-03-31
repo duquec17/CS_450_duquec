@@ -542,7 +542,11 @@ int main(int argc, char **argv) {
             &ub
         );
 
-        uboVertHost.viewMat = glm::mat4(1.0);
+        uboVertHost.viewMat = glm::lookAt(
+            glm::vec3(1,0,1),   // eye
+            glm::vec3(0,0,0),   // look-at(center)
+            glm::vec3(0,1,0));  // up
+            
         uboVertHost.projMat = glm::mat4(1.0);
         //uboVertHost.viewMat[0][0] = 2.0f;
 
