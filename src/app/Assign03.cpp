@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
 
     // Set name
     string appName = "Assign03";
-    string windowTitle = "Assign03:duquec";
+    string windowTitle = "Assign03";
     int windowWidth = 800;
     int windowHeight = 600;
 
