@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vulkan/vulkan.hpp>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "VkBootstrap.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -42,6 +43,50 @@ UBOVertex uboVertHost;
 glm::mat4 modelMat(1.0f);
 string transformString = "v";
 
+glm::vec2 lastMousePos;
+bool leftMouseDown = false;
+
+static void mouse_button_callback(
+    GLFWwindow *window,
+    int button, int action, int mods
+) {
+    if(button == GLFW_MOUSE_BUTTON_LEFT) {
+        if(action == GLFW_PRESS) {
+            leftMouseDown = true;
+        }
+        else if(action == GLFW_RELEASE) {
+            leftMouseDown = false;
+        }
+    }
+}
+
+static void mouse_motion_callback(
+    GLFWwindow *window,
+    double xpos, double ypos
+) {
+    cout << "MOUSE: " << xpos << "," << ypos << endl;
+    glm::vec2 curMouse = glm::vec2(xpos, ypos);
+    glm::vec2 diffMouse = curMouse - lastMousePos;
+
+    int winWidth, winHeight;
+    glfwGetFramebufferSize(window, &winWidth, &winHeight);
+    if(winWidth != 0 && winHeight != 0) {
+        diffMouse.x /= winWidth;
+        diffMouse.y /= winHeight;
+
+        float angle = diffMouse.x;
+        angle *= 50.0f;
+
+        if(leftMouseDown) {
+            modelMat = glm::rotate(
+                    glm::radians(angle),
+                    glm::vec3(1,0,0))*modelMat;
+        }
+    }
+
+    lastMousePos = curMouse;
+}
+
 void printRM(string name, glm::mat4 &M) {
     cout << name << ":" << endl;
     for(int i = 0; i < 4; i++) {
@@ -51,6 +96,7 @@ void printRM(string name, glm::mat4 &M) {
         cout << endl;
     }
 }
+
 
 static void key_callback(GLFWwindow *window,
                         int key, int scancode,
@@ -111,7 +157,7 @@ static void key_callback(GLFWwindow *window,
             )*modelMat;
             transformString = "T(y-0.1)*" + transformString;
         }
-
+        
 
         //cout << transformString << endl;
     }
@@ -139,6 +185,11 @@ int main(int argc, char **argv) {
                                             nullptr, nullptr);
 
     glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, mouse_motion_callback);
+    glfwSetInputMode(window,
+        GLFW_CURSOR,
+        GLFW_CURSOR_DISABLED);
 
     VkSurfaceKHR vkSurface = nullptr;
     auto surfRes = glfwCreateWindowSurface(vkbInstance.instance,
@@ -547,8 +598,15 @@ int main(int argc, char **argv) {
             glm::vec3(0,0,0),   // look-at(center)
             glm::vec3(0,1,0));  // up
             
-        uboVertHost.projMat = glm::mat4(1.0);
-        //uboVertHost.viewMat[0][0] = 2.0f;
+        float fovY = glm::radians(90.0f);
+        float aspectRatio = ((float)swapextent.width)/((float)swapextent.height);
+        float near = 0.01f;
+        float far = 1000.0f;
+        uboVertHost.projMat = glm::perspective(
+                                fovY,
+                                aspectRatio, 
+                                near, far);
+        uboVertHost.projMat[1][1] *= -1.0f;
 
         memcpy(uboVertData.mapped[0],
             &uboVertHost, sizeof(UBOVertex));
