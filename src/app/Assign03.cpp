@@ -107,7 +107,9 @@ class Assign03RenderEngine : public VulkanRenderEngine{
 glm::mat4 makeRotateZ(float rotAngle, glm::vec3 offset){
     float radians = glm::radians(rotAngle);
     glm::mat4 translationNeg = glm::translate(-offset);
-    
+    glm::mat4 rotation = glm::rotate(radians, glm::vec3(0.0f,0.0f, 1.0f));
+    glm::mat4 translationPos = glm::translate(offset);
+    return translationPos * rotation * translationNeg;
 }
 
 void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
