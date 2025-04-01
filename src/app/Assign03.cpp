@@ -91,9 +91,12 @@ class Assign03RenderEngine : public VulkanRenderEngine{
         commandBuffer.setScissor(0, scissors);
 
         // Loopthrough and record on each mesh in sceneData->allMeshes
-        for (auto& mesh : sceneData->allMeshes) {
-            recordDrawVulkanMesh(commandBuffer, allMeshes->at(0));
-        }
+        //for (auto& mesh : sceneData->allMeshes) {
+            //recordDrawVulkanMesh(commandBuffer, allMeshes->at(0));
+        //}
+
+        // Instead of loop with recordDrawVulkan, call renderScene
+        renderScene(commandBuffer, sceneData, sceneData->scene->mRootNode, glm::mat4(1.0f), 0);
 
         // Stop render pass
         commandBuffer.endRenderPass();
@@ -155,6 +158,26 @@ class Assign03RenderEngine : public VulkanRenderEngine{
         }
     }
 };
+
+void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods){
+    // If the action is either GLFW_Press or Repeat check for keys
+    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
+        switch(key) {
+            case GLFW_KEY_ESCAPE:
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+                break;
+
+            case GLFW_KEY_J:
+                sceneData->rotAngle += 1.0f;
+                break;
+            
+            case GLFW_KEY_K:
+                sceneData->rotAngle -= 1.0f;
+                break;
+        }
+    }
+}
 
 // Function for generating a transformation to rotate around Z
 glm::mat4 makeRotateZ(float rotAngle, glm::vec3 offset){
@@ -243,6 +266,12 @@ int main(int argc, char **argv) {
 
     // Create GLFW window
     GLFWwindow* window = createGLFWWindow(windowTitle, windowWidth, windowHeight);
+
+    // 
+    glfwSetWindowUserPointer(window, &sceneData);
+
+    // Set Key callBack function
+    glfwSetKeyCallback(window, keyCallBack);
 
     // Setup up Vulkan via vk-bootstrap
     VulkanInitData vkInitData;
