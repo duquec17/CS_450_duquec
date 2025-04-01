@@ -101,6 +101,59 @@ class Assign03RenderEngine : public VulkanRenderEngine{
         // End command buffer
         commandBuffer.end();
     };
+
+    virtual vector<vk::PushConstantRange>getPushConstantRanges()override{
+        // Create a push constant range for the vertex shader
+        vk::PushConstantRange vertexPushConstantRange;
+        vertexPushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+        vertexPushConstantRange.offset = 0;
+        vertexPushConstantRange.size = sizeof(UPushVertex);
+
+        // Return the appropriate vector push constant ranges
+        return {vertexPushConstantRange};
+    }
+
+    // Function for rendering a scene recursively
+    void renderScene(vk::CommandBuffer &commandBuffer,
+                     SceneData *sceneData, aiNode *node, 
+                     glm::mat4 parentMat, int level)
+    {
+        // Get the transformation for the current node
+        aiMatrix4x4 aiTrans = node->mTransformation;
+        glm::mat4 nodeT;
+
+        // Convert the transformation to a glm mat 4 nodeT
+        aiMatToGLM4(aiTrans, nodeT);
+
+        // Compute the current model matrix
+        glm::mat4 modelMat = parentMat * nodeT;
+
+        // Get location of current node
+        glm::vec3 pos = glm::vec3(modelMat[3]);
+        glm::mat4 R = makeRotateZ(sceneData->rotAngle, pos);
+        glm::mat4 tmpModel = R * modelMat;
+
+        UPushVertex uPush;
+        uPush.modelMat = tmpModel;
+
+        commandBuffer.pushConstants<UPushVertex>(
+            this->pipelineData.pipelineLayout,
+            vk::ShaderStageFlagBits::eVertex,
+            0,
+            uPush);
+
+        for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+            unsigned int meshIndex = node->mMeshes[i];
+            if (meshIndex < sceneData->allMeshes.size()) {
+                recordDrawVulkanMesh(commandBuffer, sceneData->allMeshes[meshIndex]);
+            }
+        }
+
+        for (unsigned int i = 0; i < node->mNumChildren; i++) {
+            renderScene(commandBuffer, sceneData, node->mChildren[i], modelMat, level + 1);
+        }
+    }
 };
 
 // Function for generating a transformation to rotate around Z
