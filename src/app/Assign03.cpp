@@ -22,10 +22,17 @@ struct Vertex {
 struct SceneData {
     vector<VulkanMesh> allMeshes;
     const aiScene *scene = nullptr;
+    float rotAngle = 0.0f;
+};
+
+// Hold vertex shader push constants
+struct UPushVertex {
+    alignas(16)glm::mat4 modelMat;
 };
 
 // Global instance of struct
 SceneData sceneData;
+UPushVertex uPush;
 
 // New class that inherits from VlkrEngine
 class Assign03RenderEngine : public VulkanRenderEngine{
@@ -95,6 +102,13 @@ class Assign03RenderEngine : public VulkanRenderEngine{
         commandBuffer.end();
     };
 };
+
+// Function for generating a transformation to rotate around Z
+glm::mat4 makeRotateZ(float rotAngle, glm::vec3 offset){
+    float radians = glm::radians(rotAngle);
+    glm::mat4 translationNeg = glm::translate(-offset);
+    
+}
 
 void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
     // Clear out the mesh's vertices and indices
