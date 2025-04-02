@@ -7,7 +7,7 @@ VulkanImage createVulkanImage(
     vk::Format format, vk::ImageUsageFlags usage,
     vk::ImageAspectFlags aspectFlags) {
     
-    createVulkanImage(vkInitData.device,
+    return createVulkanImage(vkInitData.device,
         vkInitData.physicalDevice,
         width, height, format, usage,
         aspectFlags);
@@ -84,7 +84,7 @@ VulkanImage createVulkanDepthImage(
     VulkanInitData &vkInitData, 
     int width, int height) {
 
-    createVulkanDepthImage(
+    return createVulkanDepthImage(
         vkInitData.device,
         vkInitData.physicalDevice,
         width, height);
