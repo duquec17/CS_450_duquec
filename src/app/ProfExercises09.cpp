@@ -276,14 +276,32 @@ int main(int argc, char **argv) {
         vk::ImageLayout::ePresentSrcKHR
     ));
 
+    attachDesc.push_back(vk::AttachmentDescription(
+        {},
+        depthImage.format,
+        vk::SampleCountFlagBits::e1,
+        vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal
+    ));
+
     vk::AttachmentReference colorAttachRef(
-        0, vk::ImageLayout::eColorAttachmentOptimal
+        0, 
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+
+    vk::AttachmentReference depthAttachRef(
+        1, 
+        vk::ImageLayout::eDepthStencilAttachmentOptimal
     );
 
     vk::SubpassDescription subpassDesc(
         vk::SubpassDescriptionFlags(),
         vk::PipelineBindPoint::eGraphics,
-        {}, colorAttachRef, {}, {}
+        {}, colorAttachRef, {}, &depthAttachRef
     );
 
     vk::RenderPass pass
@@ -511,7 +529,8 @@ int main(int argc, char **argv) {
     framebuffers.resize(swapviews.size());
     for(int i = 0; i < framebuffers.size(); i++) {
         vector<vk::ImageView> attach = {
-            swapviews.at(i)
+            swapviews.at(i),
+            depthImage.view
         };
         framebuffers[i] = device.createFramebuffer(
             vk::FramebufferCreateInfo(
@@ -575,9 +594,11 @@ int main(int argc, char **argv) {
 
         commandBuffer.reset();
         commandBuffer.begin(vk::CommandBufferBeginInfo());
-        array<vk::ClearValue, 1> clearValues {};
+        array<vk::ClearValue, 2> clearValues {};
         clearValues[0].color
          = vk::ClearColorValue(0.9f, 0.9f, 0.0f, 1.0f);
+        clearValues[1].depthStencil
+        = vk::ClearDepthStencilValue(1.0f, 0.0f);
 
         commandBuffer.beginRenderPass(
             vk::RenderPassBeginInfo(
@@ -685,6 +706,8 @@ int main(int argc, char **argv) {
     }
 
     // CLEANUP TODO
+    cleanupVulkanImage(device, depthImage);
+
     for(int i = 0; i < allDescSetLayouts.size(); i++) {
         device.destroyDescriptorSetLayout(
             allDescSetLayouts.at(i));
