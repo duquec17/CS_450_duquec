@@ -30,6 +30,7 @@ struct PointVertex {
     };
 };
 
+/*
 vector<PointVertex> vertices = {
     {{-0.5f, -0.5f, 0.5f}},
     {{ 0.5f, -0.5f, 0.5f}},
@@ -38,6 +39,7 @@ vector<PointVertex> vertices = {
 };
 
 vector<unsigned int> indices = { 0, 2, 1, 2, 0, 3};
+*/
 
 struct UniformPush {
     alignas(16) glm::mat4 modelMat;
@@ -171,6 +173,95 @@ static void key_callback(GLFWwindow *window,
 
         //cout << transformString << endl;
     }
+}
+
+void calculateTriangleNormal(
+    vector<PointVertex> &vertices,
+    int i0, int i1, int i2
+) {
+    glm::vec3 A = vertices.at(i0).pos;
+    glm::vec3 B = vertices.at(i1).pos;
+    glm::vec3 C = vertices.at(i2).pos;
+
+    glm::vec3 v1 = B - A;
+    glm::vec3 v2 = C - A;
+
+    glm::vec3 N = glm::cross(v1, v2);
+    N = glm::normalize(N);
+
+    vertices.at(i0).normal += N;
+    vertices.at(i1).normal += N;
+    vertices.at(i2).normal += N;
+}
+
+void calculateAllNormals(
+    vector<PointVertex> &vertices,
+    vector<unsigned int> &indices
+) {
+    for(int i = 0; i < vertices.size(); i++) {
+        vertices.at(i).normal = glm::vec3(0,0,0);
+    }
+
+    for(int i = 0; i < indices.size(); i+=3) {
+        calculateTriangleNormal(vertices,
+            indices.at(i),
+            indices.at(i+1),
+            indices.at(i+2));
+    }
+
+    for(int i = 0; i < vertices.size(); i++) {
+        vertices.at(i).normal
+        = glm::normalize(vertices.at(i).normal);
+    }
+}
+
+void makeCylinder(
+    vector<PointVertex> &vertices,
+    vector<unsigned int> &indices,
+    float length, float radius,
+    int faceCnt) {
+
+    vertices.clear();
+    indices.clear();
+
+    float angleInc
+     = (2.0f*glm::pi<float>())/((float)faceCnt);
+
+    for(int i = 0; i < faceCnt; i++) {
+        PointVertex left, right;
+        float x = length/2.0f;
+        float angle = angleInc*i;
+        float y = radius*glm::sin(angle);
+        float z = radius*glm::cos(angle);
+
+        left.pos = glm::vec3(-x, y, z);
+        right.pos = glm::vec3(x, y, z);
+
+        left.color = glm::vec4(1,0,0,1);
+        right.color = glm::vec4(0,1,0,1);
+
+        vertices.push_back(left);
+        vertices.push_back(right);
+    }
+
+    int max_vert_cnt = faceCnt*2;
+
+    for(int i = 0; i < faceCnt; i++) {
+        int low_left = 2*i;
+        int up_left = (2*(i+1))%max_vert_cnt;
+        int low_right = low_left + 1;
+        int up_right = up_left + 1;
+
+        indices.push_back(low_left);
+        indices.push_back(low_right);
+        indices.push_back(up_left);
+
+        indices.push_back(low_right);
+        indices.push_back(up_right);
+        indices.push_back(up_left);
+    }
+
+    calculateAllNormals(vertices, indices);
 }
 
 int main(int argc, char **argv) {
@@ -327,6 +418,10 @@ int main(int argc, char **argv) {
             {}, vk::ShaderStageFlagBits::eFragment, fragShader, "main"
         )
     };
+
+    vector<PointVertex> vertices;
+    vector<unsigned int> indices;
+    makeCylinder(vertices, indices, 1.0, 0.5, 10.0);
 
     vk::DeviceSize vertBufferSize = sizeof(vertices[0])*vertices.size();
     vk::DeviceSize indBufferSize = sizeof(indices[0])*indices.size();
