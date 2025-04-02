@@ -36,4 +36,5 @@ void transitionVulkanImageLayout(   VulkanInitData &vkInitData,
                                     vk::ImageLayout newLayout);
 
 void cleanupVulkanImage(VulkanInitData &vkInitData, VulkanImage &vkImage);
+void cleanupVulkanImage(vk::Device &device, VulkanImage &vkImage);
 

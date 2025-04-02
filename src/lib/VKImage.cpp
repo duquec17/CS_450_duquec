@@ -167,7 +167,11 @@ void transitionVulkanImageLayout(   VulkanInitData &vkInitData,
 }
 
 void cleanupVulkanImage(VulkanInitData &vkInitData, VulkanImage &vkImage) {
-    vkInitData.device.destroyImageView(vkImage.view);
-    vkInitData.device.freeMemory(vkImage.memory);
-    vkInitData.device.destroyImage(vkImage.image);
+    cleanupVulkanImage(vkInitData.device, vkImage);
+}
+
+void cleanupVulkanImage(vk::Device &device, VulkanImage &vkImage) {
+    device.destroyImageView(vkImage.view);
+    device.freeMemory(vkImage.memory);
+    device.destroyImage(vkImage.image);
 }
