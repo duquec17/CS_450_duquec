@@ -42,7 +42,7 @@ class Assign02RenderEngine : public VulkanRenderEngine{
                                      vk::CommandBuffer &commandBuffer,
                                      unsigned int frameIndex) override {
         // Void data is assumed to be vector of meshes only
-        vector<VulkanMesh> *allMeshes = static_cast<vector<VulkanMesh>*>(userData);
+        //vector<VulkanMesh> *allMeshes = static_cast<vector<VulkanMesh>*>(userData);
 
         // Cast the userData as a SceneData pointer
         SceneData *sceneData = static_cast<SceneData*>(userData);
@@ -79,7 +79,7 @@ class Assign02RenderEngine : public VulkanRenderEngine{
 
         // Loopthrough and record on each mesh in sceneData->allMeshes
         for (auto& mesh : sceneData->allMeshes) {
-            recordDrawVulkanMesh(commandBuffer, allMeshes->at(0));
+            recordDrawVulkanMesh(commandBuffer, mesh);
         }
 
         // Stop render pass
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 
     // The model to load will be provided on the command line
     // Use sampleModels sphere as default model path
-    string modelPath = "sampleModels/teapot.obj";
+    string modelPath = "sampleModels/sphere.obj";
     if (argc >= 2){
         modelPath = string(argv[1]);
     }
@@ -186,15 +186,13 @@ int main(int argc, char **argv) {
     VulkanRenderEngine *renderEngine = new Assign02RenderEngine(vkInitData);
     renderEngine->initialize(&params);
 
-    VulkanMesh vulkanMesh;
-
     // Create a mesh vertex obj. inside the loop
     for (unsigned int i = 0; i < sceneData.scene->mNumMeshes; i++) {
         aiMesh *aiMesh = sceneData.scene->mMeshes[i];
         Mesh<Vertex> mesh;
         extractMeshData(aiMesh, mesh);
 
-        vulkanMesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), mesh);
+        VulkanMesh vulkanMesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), mesh);
         sceneData.allMeshes.push_back(vulkanMesh);
     }
 
@@ -256,8 +254,8 @@ int main(int argc, char **argv) {
 
     // Cleanup & After drawing loop
     //cleanupVulkanMesh(vkInitData, mesh);
-    for (auto &VulkanMesh : sceneData.allMeshes) {
-        cleanupVulkanMesh(vkInitData, vulkanMesh);
+    for (auto &mesh : sceneData.allMeshes) {
+        cleanupVulkanMesh(vkInitData, mesh);
     }
     sceneData.allMeshes.clear();
 
