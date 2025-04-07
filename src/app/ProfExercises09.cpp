@@ -251,7 +251,7 @@ void makeCylinder(
         right.pos = glm::vec3(x, y, z);
 
         left.color = glm::vec4(1,0,0,1);
-        right.color = glm::vec4(0,1,0,1);
+        right.color = glm::vec4(1,0,1,1);
 
         vertices.push_back(left);
         vertices.push_back(right);

@@ -31,7 +31,7 @@ void main() {
     vec4 colorAtt = vec4(att,att,att,1.0);
 
     float diffuse = max(0, dot(L, N));
+    vec3 diffColor = diffuse*vec3(ubo.light.color)*vec3(interColor);
 
-
-    outColor = vec4(diffuse, diffuse, diffuse, 1.0);
+    outColor = vec4(diffColor, 1.0);
 } 
