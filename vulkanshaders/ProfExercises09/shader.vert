@@ -10,6 +10,7 @@ layout(location = 2) out vec3 interNormal;
 
 layout(push_constant) uniform PushConstants {
     mat4 modelMat;
+    mat4 normMat;
 } pc;
 
 layout(set=0, binding=0) uniform UBOVertex {
@@ -24,7 +25,8 @@ void main() {
 
     interPos = vec3(vpos);
     interColor = color;
-    interNormal = normal; // TODO: normal matrix
+    mat3 normMat = mat3(pc.normMat);
+    interNormal = normMat*normal; 
 
     gl_Position = pos;  
 } 

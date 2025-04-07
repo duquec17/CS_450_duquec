@@ -41,8 +41,15 @@ vector<PointVertex> vertices = {
 vector<unsigned int> indices = { 0, 2, 1, 2, 0, 3};
 */
 
+struct PointLight {
+    alignas(16) glm::vec4 pos;
+    alignas(16) glm::vec4 vpos;
+    alignas(16) glm::vec4 color;
+};
+
 struct UniformPush {
     alignas(16) glm::mat4 modelMat;
+    alignas(16) glm::mat4 normMat;
 };
 
 struct UBOVertex {
@@ -51,6 +58,12 @@ struct UBOVertex {
 };
 
 UBOVertex uboVertHost;
+
+struct UBOFragment {
+    PointLight light;
+};
+
+UBOFragment uboFragHost;
 
 glm::mat4 modelMat(1.0f);
 string transformString = "v";
@@ -272,6 +285,9 @@ int main(int argc, char **argv) {
     }
 
     cout << "BEGIN THE EXERCISE!" << endl;
+
+    uboFragHost.light.pos = glm::vec4(0,0.5,0.5,1.0);
+    uboFragHost.light.color = glm::vec4(1,1,1,1);
 
     vkb::InstanceBuilder instBuilder;
     auto instRes = instBuilder.request_validation_layers()
@@ -529,10 +545,18 @@ int main(int argc, char **argv) {
         device, phyDevice, sizeof(UBOVertex), 1
     ); 
 
+    UBOData uboFragData = createVulkanUniformBufferData(
+        device, phyDevice, sizeof(UBOFragment), 1
+    );
+
     vector<vk::DescriptorSetLayoutBinding> allBinds = {
         vk::DescriptorSetLayoutBinding(
             0, vk::DescriptorType::eUniformBuffer,
             1, vk::ShaderStageFlagBits::eVertex
+        ),
+        vk::DescriptorSetLayoutBinding(
+            1, vk::DescriptorType::eUniformBuffer,
+            1, vk::ShaderStageFlagBits::eFragment
         )
     };
 
@@ -547,7 +571,7 @@ int main(int argc, char **argv) {
     vector<vk::DescriptorPoolSize> poolSizes = {
         vk::DescriptorPoolSize(
             vk::DescriptorType::eUniformBuffer,
-            1
+            2
         )
     };
 
@@ -566,6 +590,8 @@ int main(int argc, char **argv) {
             .setSetLayouts(allDescSetLayouts)
     );
 
+    vector<vk::WriteDescriptorSet> allWrites;
+
     vk::DescriptorBufferInfo descBufferInfo
     = vk::DescriptorBufferInfo()
         .setBuffer(uboVertData.bufferData[0].buffer)
@@ -582,7 +608,27 @@ int main(int argc, char **argv) {
         .setDescriptorCount(1)
         .setBufferInfo(descBufferInfo);
 
-    device.updateDescriptorSets({writeInfo}, {});
+    allWrites.push_back(writeInfo);
+
+    vk::DescriptorBufferInfo descBufferFragInfo
+    = vk::DescriptorBufferInfo()
+        .setBuffer(uboFragData.bufferData[0].buffer)
+        .setOffset(0)
+        .setRange(sizeof(UBOFragment));
+
+    vk::WriteDescriptorSet fragWriteInfo
+    = vk::WriteDescriptorSet()
+        .setDstSet(descSets[0])
+        .setDstBinding(1)
+        .setDstArrayElement(0)
+        .setDescriptorType(
+            vk::DescriptorType::eUniformBuffer)
+        .setDescriptorCount(1)
+        .setBufferInfo(descBufferFragInfo);
+
+    allWrites.push_back(fragWriteInfo);
+
+    device.updateDescriptorSets(allWrites, {});
 
     vk::PipelineLayoutCreateInfo layoutInfo(
         {}, allDescSetLayouts, pushRanges
@@ -726,6 +772,17 @@ int main(int argc, char **argv) {
 
         UniformPush ub{};
         ub.modelMat = modelMat;
+        
+        uboVertHost.viewMat = glm::lookAt(
+            glm::vec3(1,1,1),   // eye
+            glm::vec3(0,0,0),   // look-at(center)
+            glm::vec3(0,1,0));  // up
+
+        ub.normMat = glm::mat4(
+                        glm::transpose(
+                            glm::inverse(
+                                glm::mat3(
+                                    uboVertHost.viewMat*ub.modelMat))));
 
         commandBuffer.pushConstants(
             pipelineLayout,
@@ -733,11 +790,6 @@ int main(int argc, char **argv) {
             0, sizeof(UniformPush),
             &ub
         );
-
-        uboVertHost.viewMat = glm::lookAt(
-            glm::vec3(1,0,1),   // eye
-            glm::vec3(0,0,0),   // look-at(center)
-            glm::vec3(0,1,0));  // up
             
         float fovY = glm::radians(90.0f);
         float aspectRatio = ((float)swapextent.width)/((float)swapextent.height);
@@ -749,8 +801,13 @@ int main(int argc, char **argv) {
                                 near, far);
         uboVertHost.projMat[1][1] *= -1.0f;
 
+        uboFragHost.light.vpos = uboVertHost.viewMat*uboFragHost.light.pos;
+
         memcpy(uboVertData.mapped[0],
             &uboVertHost, sizeof(UBOVertex));
+        memcpy(uboFragData.mapped[0],
+            &uboFragHost, sizeof(UBOFragment));
+
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics,
             pipelineLayout,
@@ -810,6 +867,7 @@ int main(int argc, char **argv) {
     allDescSetLayouts.clear();
 
     device.destroyDescriptorPool(descPool);
+    cleanupVulkanUniformBufferData(device, uboFragData);
     cleanupVulkanUniformBufferData(device, uboVertData);
     device.destroySemaphore(imageSem);
     device.destroySemaphore(renderSem);
