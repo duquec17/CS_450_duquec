@@ -2,6 +2,7 @@
 #include "VKRender.hpp"
 #include "VKImage.hpp"
 #include "VKUtility.hpp"
+#include "VKUniform.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -23,6 +24,18 @@ struct SceneData {
     vector<VulkanMesh> allMeshes;
     const aiScene *scene = nullptr;
     float rotAngle = 0.0f;
+    
+    glm::vec3 eye;
+    glm::vec3 lookAt;
+    glm::vec2 mousePos;
+    glm::mat4 currentViewMat;
+    glm::mat4 currentProjMat;
+};
+
+// Hold Vertex shader UBO host data
+struct UBOVertex {
+    alignas(16) glm::mat4 viewjMat;
+    alignas(16) glm::mat4 projMat;
 };
 
 // Hold vertex shader push constants
@@ -41,6 +54,15 @@ glm::mat4 makeRotateZ(float rotAngle, glm::vec3 offset){
     glm::mat4 rotation = glm::rotate(radians, glm::vec3(0.0f,0.0f, 1.0f));
     glm::mat4 translationPos = glm::translate(offset);
     return translationPos * rotation * translationNeg;
+}
+
+// Function for generating a transformation to rotate point and axis
+glm::mat4 makeLocalRotate(glm::vec3 offset, glm::vec3 axis, float angle) {
+    float radi = glm::radians(angle);
+    glm::mat4 negTrans = glm::translate(-offset);
+    glm::mat4 rotAxi = glm::rotate(radi, glm::vec3(0.0f,0.0f, 1.0f));
+    glm::mat4 transPos = glm::translate(offset);
+    return negTrans * rotAxi * transPos;
 }
 
 // New class that inherits from VlkrEngine
