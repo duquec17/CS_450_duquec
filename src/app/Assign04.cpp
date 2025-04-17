@@ -115,6 +115,12 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
 
 // New class that inherits from VlkrEngine
 class Assign04RenderEngine : public VulkanRenderEngine{
+    protected:
+        UBOVertex hostUBOVert;
+        UBOData deviceUBOVert;
+        vk::DescriptorPool descriptorPool;
+        vector<vk::DescriptorSet>descriptorSets;
+
     // Constructor
     public:
         Assign04RenderEngine(VulkanInitData &vkInitData):
@@ -124,6 +130,21 @@ class Assign04RenderEngine : public VulkanRenderEngine{
     virtual bool initialize(VulkanInitRenderParams *params) override {
         if(!VulkanRenderEngine::initialize(params)){return false;}
         return true;
+
+        // Create deviceUBOVert
+        deviceUBOVert = createVulkanUniformBufferData(
+            vkInitData.device, vkInitData.physicalDevice, sizeof(UBOVertex), MAX_FRAMES_IN_FLIGHT);
+
+        // Create descriptor pool
+        std::vector<vk::DescriptorPoolSize> poolSizes = {
+            {vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT}
+        };
+        vk::DescriptorPoolCreateInfo poolCreateInfo = {};
+        poolCreateInfo.setPoolSizes(poolSizes)
+                      .setMaxSets(MAX_FRAMES_IN_FLIGHT);
+        descriptorPool = vkInitData.device.createDescriptorPool(poolCreateInfo);
+
+        
     };
 
     // Destructor
