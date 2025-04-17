@@ -65,6 +65,54 @@ glm::mat4 makeLocalRotate(glm::vec3 offset, glm::vec3 axis, float angle) {
     return negTrans * rotAxi * transPos;
 }
 
+static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
+    // Retrieve scene data
+    SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
+
+    // Calculate relative mouse position
+    glm::vec2 currentMousePos(xpos, ypos);
+    glm::vec2 relMouse = currentMousePos - sceneData->mousePos;
+
+    sceneData->mousePos = currentMousePos;
+
+    // Get frame buffer size
+    int width, height;
+    glfwGetFramebufferSize(window, &width,&height);
+
+    if (width > 0 && height > 0) {
+        // Scale rlative mouse motion to rotate camera
+        relMouse.x /= static_cast<float>(width);
+        relMouse.y /= static_cast<float>(height);
+
+        // Camera rotation and transformations
+        glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
+
+        // Relative Y motion
+        glm::mat4 rotateY = makeLocalRotate(
+            sceneData->eye,
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            30.0f * relMouse.x
+        );
+
+        // Compute local x-axis
+        glm::vec3 localXAxis = glm::normalize(glm::cross(cameraDirection, glm::vec3 (0.0f, 1.0f, 0.0f)));
+
+        // Relative x motion
+        glm::mat4 rotateX = makeLocalRotate(
+            sceneData->eye,
+            localXAxis,
+            30.0f * relMouse.y
+        );
+
+        // Apply rotations
+        glm::vec4 lookAtV = glm::vec4(sceneData->lookAt, 1.0f);
+        lookAtV = rotateY * rotateX * lookAtV;
+
+        // Update lookAt point
+        sceneData->lookAt = glm::vec3(lookAtV);
+    }
+}
+
 // New class that inherits from VlkrEngine
 class Assign04RenderEngine : public VulkanRenderEngine{
     // Constructor
@@ -194,6 +242,19 @@ void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods
     // If the action is either GLFW_Press or Repeat check for keys
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
+        
+        // Define movement speed
+        const float speed = 0.1f;
+
+        // Camera rotation and transformations
+        glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
+
+        // Define global Y-axis
+        glm::vec3 globalYAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+
+        // Compute local X-axis (right direction)
+        glm::vec3 localXAxis = glm::normalize(glm::cross(cameraDirection, globalYAxis));
+
         switch(key) {
             case GLFW_KEY_ESCAPE:
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -205,6 +266,26 @@ void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods
             
             case GLFW_KEY_K:
                 sceneData->rotAngle -= 1.0f;
+                break;
+
+            case GLFW_KEY_W:
+                sceneData->eye += cameraDirection * speed;
+                sceneData->lookAt += cameraDirection * speed;
+                break;
+            
+            case GLFW_KEY_S:
+                sceneData->eye -= cameraDirection * speed;
+                sceneData->lookAt -= cameraDirection * speed;
+                break;
+
+            case GLFW_KEY_D:
+                sceneData->eye += localXAxis * speed;
+                sceneData->lookAt += localXAxis * speed;
+                break;
+            
+            case GLFW_KEY_A:
+                sceneData->eye -= localXAxis * speed;
+                sceneData->lookAt -= localXAxis * speed;
                 break;
         }
     }
