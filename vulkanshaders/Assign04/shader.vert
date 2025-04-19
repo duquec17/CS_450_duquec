@@ -4,6 +4,11 @@ layout(push_constant) uniform PushConstants {
     mat4 modelMat;
 } pc;
 
+layout(std140, binding = 0) uniform matrices {
+    mat4 viewMat;
+    mat4 projMat;
+};
+
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec4 inColor;
 
