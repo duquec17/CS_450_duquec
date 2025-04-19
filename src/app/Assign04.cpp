@@ -129,8 +129,9 @@ class Assign04RenderEngine : public VulkanRenderEngine{
 
     // Overrides initialize function
     virtual bool initialize(VulkanInitRenderParams *params) override {
-        if(!VulkanRenderEngine::initialize(params)){return false;}
-        return true;
+        if(!VulkanRenderEngine::initialize(params)){
+            return false;
+        }
 
         // Create deviceUBOVert
         deviceUBOVert = createVulkanUniformBufferData(
@@ -138,7 +139,7 @@ class Assign04RenderEngine : public VulkanRenderEngine{
 
         // Create descriptor pool
         std::vector<vk::DescriptorPoolSize> poolSizes = {
-            {vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT}
+            {vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)}
         };
         vk::DescriptorPoolCreateInfo poolCreateInfo = {};
         poolCreateInfo.setPoolSizes(poolSizes)
@@ -243,61 +244,6 @@ class Assign04RenderEngine : public VulkanRenderEngine{
     virtual~Assign04RenderEngine(){
         vkInitData.device.destroyDescriptorPool(descriptorPool);
         cleanupVulkanUniformBufferData(vkInitData.device, deviceUBOVert);
-    };
-
-    /// Override recordCommandBuffer function
-    virtual void recordCommandBuffer(void *userData,
-                                     vk::CommandBuffer &commandBuffer,
-                                     unsigned int frameIndex) override {
-        // Void data is assumed to be vector of meshes only
-        vector<VulkanMesh> *allMeshes = static_cast<vector<VulkanMesh>*>(userData);
-
-        // Cast the userData as a SceneData pointer
-        SceneData *sceneData = static_cast<SceneData*>(userData);
-
-        // Begin commands
-        commandBuffer.begin(vk::CommandBufferBeginInfo());
-
-        // Get the extents of the buffers (since we'll use it a few times)
-        vk::Extent2D extent = vkInitData.swapchain.extent;
-
-        // Begin render pass
-        array<vk::ClearValue, 2> clearValues {};
-        clearValues[0].color = vk::ClearColorValue(0.6f, 0.1f, 0.7f, 1.0f);
-        clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.0f, 0.0f);
-
-        commandBuffer.beginRenderPass(vk::RenderPassBeginInfo(
-            this->renderPass,
-            this->framebuffers[frameIndex],
-            { {0,0}, extent },
-            clearValues),
-            vk::SubpassContents::eInline);
-
-        // Bind pipeline
-        commandBuffer.bindPipeline(
-            vk::PipelineBindPoint::eGraphics,
-            this->pipelineData.graphicsPipeline);
-
-        // Set up viewport and scissors
-        vk::Viewport viewports[] = {{0, 0, (float)extent.width, (float)extent.height, 0.0f, 1.0f}};
-        commandBuffer.setViewport(0, viewports);
-
-        vk::Rect2D scissors[] = {{{0,0}, extent}};
-        commandBuffer.setScissor(0, scissors);
-
-        // Loopthrough and record on each mesh in sceneData->allMeshes
-        //for (auto& mesh : sceneData->allMeshes) {
-            //recordDrawVulkanMesh(commandBuffer, allMeshes->at(0));
-        //}
-
-        // Instead of loop with recordDrawVulkan, call renderScene
-        renderScene(commandBuffer, sceneData, sceneData->scene->mRootNode, glm::mat4(1.0f), 0);
-
-        // Stop render pass
-        commandBuffer.endRenderPass();
-
-        // End command buffer
-        commandBuffer.end();
     };
 
     virtual vector<vk::PushConstantRange>getPushConstantRanges()override{
