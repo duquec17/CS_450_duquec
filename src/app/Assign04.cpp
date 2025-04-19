@@ -132,14 +132,13 @@ class Assign04RenderEngine : public VulkanRenderEngine{
         if(!VulkanRenderEngine::initialize(params)){
             return false;
         }
-
         // Create deviceUBOVert
         deviceUBOVert = createVulkanUniformBufferData(
             vkInitData.device, vkInitData.physicalDevice, sizeof(UBOVertex), MAX_FRAMES_IN_FLIGHT);
 
         // Create descriptor pool
         std::vector<vk::DescriptorPoolSize> poolSizes = {
-            {vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)}
+            {vk::DescriptorType::eUniformBuffer,static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)}
         };
         vk::DescriptorPoolCreateInfo poolCreateInfo = {};
         poolCreateInfo.setPoolSizes(poolSizes)
@@ -306,7 +305,7 @@ void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods
         SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
         
         // Define movement speed
-        const float speed = 0.1f;
+        float speed = 0.1f;
 
         // Camera rotation and transformations
         glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
