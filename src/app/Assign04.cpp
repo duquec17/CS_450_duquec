@@ -12,6 +12,7 @@
 #include "glm/gtx/transform.hpp"
 #include "glm/gtx/string_cast.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include <vulkan/vulkan_structs.hpp>
 
 // Hold information for a vertex
 struct Vertex {
@@ -144,7 +145,30 @@ class Assign04RenderEngine : public VulkanRenderEngine{
                       .setMaxSets(MAX_FRAMES_IN_FLIGHT);
         descriptorPool = vkInitData.device.createDescriptorPool(poolCreateInfo);
 
-        
+        // Create descriptor sets
+        std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, pipelineData.descriptorSetLayouts[0]);
+        vk::DescriptorSetAllocateInfo allocInfo = {};
+        allocInfo.setDescriptorPool(descriptorPool)
+                 .setSetLayouts(layouts);
+        descriptorSets = vkInitData.device.allocateDescriptorSets(allocInfo);
+
+        // Configure descriptor sets
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            vk::DescriptorBufferInfo bufferInfo = {};
+            bufferInfo.setBuffer(deviceUBOVert.bufferData[i].buffer)
+                      .setOffset(0)
+                      .setRange(sizeof(UBOVertex));
+
+            vk::WriteDescriptorSet write = {};
+            write.setDstSet(descriptorSets[i])
+                 .setDstBinding(0)
+                 .setDstArrayElement(0)
+                 .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                 .setDescriptorCount(1)
+                 .setBufferInfo(bufferInfo);
+
+            vkInitData.device.updateDescriptorSets({write}, {});
+        } 
     };
 
     // Destructor
