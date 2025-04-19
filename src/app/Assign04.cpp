@@ -29,13 +29,13 @@ struct SceneData {
     glm::vec3 eye;
     glm::vec3 lookAt;
     glm::vec2 mousePos;
-    glm::mat4 currentViewMat;
-    glm::mat4 currentProjMat;
+    glm::mat4 viewMat;
+    glm::mat4 projMat;
 };
 
 // Hold Vertex shader UBO host data
 struct UBOVertex {
-    alignas(16) glm::mat4 viewjMat;
+    alignas(16) glm::mat4 viewMat;
     alignas(16) glm::mat4 projMat;
 };
 
@@ -168,11 +168,82 @@ class Assign04RenderEngine : public VulkanRenderEngine{
                  .setBufferInfo(bufferInfo);
 
             vkInitData.device.updateDescriptorSets({write}, {});
-        } 
+        }
+
+        return true;
     };
 
+    // Override getDiscriptorSetLayOuts
+    virtual std::vector<vk::DescriptorSetLayout> getDescriptorSetLayouts() override {
+        vk::DescriptorSetLayoutBinding binding = {};
+        binding.setBinding(0)
+               .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+               .setDescriptorCount(1)
+               .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+               .setPImmutableSamplers(nullptr);
+
+        vk::DescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.setBindings(binding);
+
+        vk::DescriptorSetLayout layout = vkInitData.device.createDescriptorSetLayout(layoutInfo);
+        return {layout};
+    }
+
+    // Update uniform buffers
+    virtual void updateUniformBuffers(SceneData *sceneData, vk::CommandBuffer &commandBuffer) {
+        hostUBOVert.viewMat = sceneData->viewMat;
+        hostUBOVert.projMat = sceneData->projMat;
+        hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
+
+        memcpy(deviceUBOVert.mapped[currentImage], &hostUBOVert, sizeof(hostUBOVert));
+
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, pipelineData.pipelineLayout, 0,
+            descriptorSets[currentImage], {});
+    }
+
+    // Override recordCommandBuffer
+    virtual void recordCommandBuffer(void *userData,
+                                     vk::CommandBuffer &commandBuffer,
+                                     unsigned int frameIndex) override {
+        SceneData *sceneData = static_cast<SceneData *>(userData);
+
+        commandBuffer.begin(vk::CommandBufferBeginInfo());
+
+        vk::Extent2D extent = vkInitData.swapchain.extent;
+
+        std::array<vk::ClearValue, 2> clearValues = {
+            vk::ClearColorValue(std::array<float, 4>{0.6f, 0.1f, 0.7f, 1.0f}),
+            vk::ClearDepthStencilValue(1.0f, 0.0f)
+        };
+
+        commandBuffer.beginRenderPass(
+            vk::RenderPassBeginInfo(
+                renderPass, framebuffers[frameIndex],
+                {{0, 0}, extent}, clearValues),
+            vk::SubpassContents::eInline);
+
+        commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipelineData.graphicsPipeline);
+
+        vk::Viewport viewport = {0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f};
+        commandBuffer.setViewport(0, viewport);
+
+        vk::Rect2D scissor = {{0, 0}, extent};
+        commandBuffer.setScissor(0, scissor);
+
+        updateUniformBuffers(sceneData, commandBuffer);
+
+        renderScene(commandBuffer, sceneData, sceneData->scene->mRootNode, glm::mat4(1.0f), 0);
+
+        commandBuffer.endRenderPass();
+        commandBuffer.end();
+    }
+
     // Destructor
-    virtual~Assign04RenderEngine(){};
+    virtual~Assign04RenderEngine(){
+        vkInitData.device.destroyDescriptorPool(descriptorPool);
+        cleanupVulkanUniformBufferData(vkInitData.device, deviceUBOVert);
+    };
 
     /// Override recordCommandBuffer function
     virtual void recordCommandBuffer(void *userData,
@@ -417,7 +488,21 @@ int main(int argc, char **argv) {
     // Create GLFW window
     GLFWwindow* window = createGLFWWindow(windowTitle, windowWidth, windowHeight);
 
-    // 
+    // After GLFW window creation
+    double mx, my;
+    glfwGetCursorPos(window, &mx, &my);
+    sceneData.mousePos = glm::vec2(mx, my);
+
+    // Hide cursor
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    // Set the mouse motion cursor callback
+    glfwSetCursorPosCallback(window, [](GLFWwindow *window, double xpos, double ypos) {
+        SceneData *sceneData = static_cast<SceneData *>(glfwGetWindowUserPointer(window));
+        glm::vec2 newMousePos(xpos, ypos);
+        glm::vec2 delta = newMousePos - sceneData->mousePos;
+    });
+    
     glfwSetWindowUserPointer(window, &sceneData);
 
     // Set Key callBack function
@@ -452,25 +537,6 @@ int main(int argc, char **argv) {
         sceneData.allMeshes.push_back(vulkanMesh);
     }
 
-    /* Comment out the current code that creates hostMesh, VulkanMesh, & list
-    // Create very simple quad on host    
-    Mesh<SimpleVertex> hostMesh = {
-        {
-            {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-            {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-            {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-            {{-0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f}}
-        },
-        { 0, 2, 1, 2, 0, 3 }
-    };
-
-    // Create Vulkan mesh
-    VulkanMesh mesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), hostMesh);
-    vector<VulkanMesh> allMeshes {
-        { mesh }
-    };
-    */
-
     float timeElapsed = 1.0f;
     int framesRendered = 0;
     auto startCountTime = getTime();
@@ -478,8 +544,20 @@ int main(int argc, char **argv) {
 
     // Main render loop
     while (!glfwWindowShouldClose(window)) {
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        float aspectRatio = (height == 0) ? 1.0f : static_cast<float>(width) / height;
+
+        // Update view matrix using glm::lookAt
+        sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
+        
+        // Update prok matrix
+        sceneData.projMat = glm::perspective(glm::radians(90.0f), aspectRatio, 0.01f, 50.0f);
+
         // Get start time
         auto startTime = getTime();
+
+        glfwSwapBuffers(window);
 
         // Poll events for window
         glfwPollEvents();
