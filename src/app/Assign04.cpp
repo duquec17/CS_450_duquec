@@ -140,6 +140,7 @@ class Assign04RenderEngine : public VulkanRenderEngine{
         std::vector<vk::DescriptorPoolSize> poolSizes = {
             {vk::DescriptorType::eUniformBuffer,static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)}
         };
+        
         vk::DescriptorPoolCreateInfo poolCreateInfo = {};
         poolCreateInfo.setPoolSizes(poolSizes)
                       .setMaxSets(MAX_FRAMES_IN_FLIGHT);
@@ -491,7 +492,9 @@ int main(int argc, char **argv) {
     while (!glfwWindowShouldClose(window)) {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-        float aspectRatio = (height == 0) ? 1.0f : static_cast<float>(width) / height;
+        float aspectRatio = (height > 0) ? static_cast<float>(width) / height : 1.0f;
+        sceneData.projMat = glm::perspective(glm::radians(90.0f), aspectRatio, 0.01f, 50.0f);
+        sceneData.projMat[1][1] *= -1; // Flip Y-coordinate for Vulkan's NDC
 
         // Update view matrix using glm::lookAt
         sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -533,7 +536,7 @@ int main(int argc, char **argv) {
 
     // Cleanup & After drawing loop
     //cleanupVulkanMesh(vkInitData, mesh);
-    for (auto &VulkanMesh : sceneData.allMeshes) {
+    for (auto &vulkanMesh : sceneData.allMeshes) {
         cleanupVulkanMesh(vkInitData, vulkanMesh);
     }
     sceneData.allMeshes.clear();
