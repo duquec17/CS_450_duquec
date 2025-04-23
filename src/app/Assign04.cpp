@@ -26,7 +26,7 @@ struct SceneData {
     const aiScene *scene = nullptr;
     float rotAngle = 0.0f;
     
-    glm::vec3 eye;
+    glm::vec3 eye = glm::vec3(0,0,1);
     glm::vec3 lookAt;
     glm::vec2 mousePos;
     glm::mat4 viewMat;
@@ -92,7 +92,7 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
         glm::mat4 rotateY = makeLocalRotate(
             sceneData->eye,
             glm::vec3(0.0f, 1.0f, 0.0f),
-            30.0f * relMouse.x
+            30.0f * -relMouse.x
         );
         
         // Camera rotation and transformations
@@ -105,7 +105,7 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
         glm::mat4 rotateX = makeLocalRotate(
             sceneData->eye,
             localXAxis,
-            30.0f * relMouse.y
+            30.0f * -relMouse.y
         );
 
         // Apply rotations
@@ -197,7 +197,7 @@ class Assign04RenderEngine : public VulkanRenderEngine{
     virtual void updateUniformBuffers(SceneData *sceneData, vk::CommandBuffer &commandBuffer) {
         hostUBOVert.viewMat = sceneData->viewMat;
         hostUBOVert.projMat = sceneData->projMat;
-        hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
+        //hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
 
         memcpy(deviceUBOVert.mapped[currentImage], &hostUBOVert, sizeof(hostUBOVert));
 
@@ -404,7 +404,7 @@ int main(int argc, char **argv) {
 
     // The model to load will be provided on the command line
     // Use sampleModels sphere as default model path
-    string modelPath = "sampleModels/teapot.obj";
+    string modelPath = "sampleModels/bunnyteatime.glb";
     if (argc >= 2){
         modelPath = string(argv[1]);
     }
@@ -446,14 +446,7 @@ int main(int argc, char **argv) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Set the mouse motion cursor callback
-    glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos) {
-        SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
-        glm::vec2 newMousePos(xpos, ypos);
-        glm::vec2 delta = newMousePos - sceneData->mousePos;
-
-        // Update the mouse position
-        sceneData->mousePos = newMousePos;
-    });
+    glfwSetCursorPosCallback(window, mouse_position_callback);
     
     // Set window user pointer
     glfwSetWindowUserPointer(window, &sceneData);
@@ -502,7 +495,7 @@ int main(int argc, char **argv) {
         
         // Update proj matrix 
         sceneData.projMat = glm::perspective(glm::radians(90.0f), aspectRatio, 0.01f, 50.0f);
-        sceneData.projMat[1][1] *= -1; // Flip Y-coordinate for Vulkan's NDC
+        //sceneData.projMat[1][1] *= -1; // Flip Y-coordinate for Vulkan's NDC
 
         // Update view matrix using glm::lookAt
         sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
