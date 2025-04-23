@@ -59,13 +59,16 @@ glm::mat4 makeRotateZ(float rotAngle, glm::vec3 offset){
 
 // Function for generating a transformation to rotate point and axis
 glm::mat4 makeLocalRotate(glm::vec3 offset, glm::vec3 axis, float angle) {
-    float radi = glm::radians(angle);
-    glm::mat4 negTrans = glm::translate(-offset);
-    glm::mat4 rotAxi = glm::rotate(radi, glm::vec3(0.0f,0.0f, 1.0f));
-    glm::mat4 transPos = glm::translate(offset);
-    return negTrans * rotAxi * transPos;
+    float radians = glm::radians(angle);
+
+    glm::mat4 translationNeg = glm::translate(glm::mat4(1.0f), -offset); // Translate by negative offset
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), radians, axis);   // Rotate around arbitrary axis
+    glm::mat4 translationPos = glm::translate(glm::mat4(1.0f), offset); // Translate back by offset
+    
+    return translationPos * rotation * translationNeg;
 }
 
+// Function for Mouse cursor movement callback
 static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos) {
     // Retrieve scene data
     SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
@@ -78,15 +81,12 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
 
     // Get frame buffer size
     int width, height;
-    glfwGetFramebufferSize(window, &width,&height);
+    glfwGetFramebufferSize(window, &width, &height);
 
     if (width > 0 && height > 0) {
         // Scale rlative mouse motion to rotate camera
         relMouse.x /= static_cast<float>(width);
         relMouse.y /= static_cast<float>(height);
-
-        // Camera rotation and transformations
-        glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
 
         // Relative Y motion
         glm::mat4 rotateY = makeLocalRotate(
@@ -94,6 +94,9 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
             glm::vec3(0.0f, 1.0f, 0.0f),
             30.0f * relMouse.x
         );
+        
+        // Camera rotation and transformations
+        glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
 
         // Compute local x-axis
         glm::vec3 localXAxis = glm::normalize(glm::cross(cameraDirection, glm::vec3 (0.0f, 1.0f, 0.0f)));
@@ -107,7 +110,7 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
 
         // Apply rotations
         glm::vec4 lookAtV = glm::vec4(sceneData->lookAt, 1.0f);
-        lookAtV = rotateY * rotateX * lookAtV;
+        lookAtV = rotateX * rotateY * lookAtV;
 
         // Update lookAt point
         sceneData->lookAt = glm::vec3(lookAtV);
@@ -120,18 +123,18 @@ class Assign04RenderEngine : public VulkanRenderEngine{
         UBOVertex hostUBOVert;
         UBOData deviceUBOVert;
         vk::DescriptorPool descriptorPool;
-        vector<vk::DescriptorSet>descriptorSets;
+        vector<vk::DescriptorSet> descriptorSets;
 
     // Constructor
     public:
-        Assign04RenderEngine(VulkanInitData &vkInitData):
-        VulkanRenderEngine(vkInitData){};
+        Assign04RenderEngine(VulkanInitData &vkInitData): VulkanRenderEngine(vkInitData){}
 
     // Overrides initialize function
     virtual bool initialize(VulkanInitRenderParams *params) override {
         if(!VulkanRenderEngine::initialize(params)){
             return false;
         }
+
         // Create deviceUBOVert
         deviceUBOVert = createVulkanUniformBufferData(
             vkInitData.device, vkInitData.physicalDevice, sizeof(UBOVertex), MAX_FRAMES_IN_FLIGHT);
@@ -443,12 +446,16 @@ int main(int argc, char **argv) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // Set the mouse motion cursor callback
-    glfwSetCursorPosCallback(window, [](GLFWwindow *window, double xpos, double ypos) {
-        SceneData *sceneData = static_cast<SceneData *>(glfwGetWindowUserPointer(window));
+    glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos) {
+        SceneData* sceneData = static_cast<SceneData*>(glfwGetWindowUserPointer(window));
         glm::vec2 newMousePos(xpos, ypos);
         glm::vec2 delta = newMousePos - sceneData->mousePos;
+
+        // Update the mouse position
+        sceneData->mousePos = newMousePos;
     });
     
+    // Set window user pointer
     glfwSetWindowUserPointer(window, &sceneData);
 
     // Set Key callBack function
@@ -463,9 +470,7 @@ int main(int argc, char **argv) {
     string fragSPVFilename = "build/compiledshaders/" + appName + "/shader.frag.spv";
 
     // Create render engine
-    VulkanInitRenderParams params = {
-        vertSPVFilename, fragSPVFilename
-    };
+    VulkanInitRenderParams params = {vertSPVFilename, fragSPVFilename};
 
     // Before your drawing loop
     VulkanRenderEngine *renderEngine = new Assign04RenderEngine(vkInitData);
@@ -492,16 +497,16 @@ int main(int argc, char **argv) {
     while (!glfwWindowShouldClose(window)) {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
+        
         float aspectRatio = (height > 0) ? static_cast<float>(width) / height : 1.0f;
+        
+        // Update proj matrix 
         sceneData.projMat = glm::perspective(glm::radians(90.0f), aspectRatio, 0.01f, 50.0f);
         sceneData.projMat[1][1] *= -1; // Flip Y-coordinate for Vulkan's NDC
 
         // Update view matrix using glm::lookAt
         sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
         
-        // Update prok matrix
-        sceneData.projMat = glm::perspective(glm::radians(90.0f), aspectRatio, 0.01f, 50.0f);
-
         // Get start time
         auto startTime = getTime();
 
