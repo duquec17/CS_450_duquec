@@ -99,7 +99,7 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
         glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
 
         // Compute local x-axis
-        glm::vec3 localXAxis = glm::normalize(glm::cross(-cameraDirection, glm::vec3 (0.0f, 1.0f, 0.0f)));
+        glm::vec3 localXAxis = glm::normalize(glm::cross(cameraDirection, glm::vec3 (0.0f, 1.0f, 0.0f)));
 
         // Relative x motion
         glm::mat4 rotateX = makeLocalRotate(
@@ -197,7 +197,7 @@ class Assign04RenderEngine : public VulkanRenderEngine{
     virtual void updateUniformBuffers(SceneData *sceneData, vk::CommandBuffer &commandBuffer) {
         hostUBOVert.viewMat = sceneData->viewMat;
         hostUBOVert.projMat = sceneData->projMat;
-        //hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
+        hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
 
         memcpy(deviceUBOVert.mapped[currentImage], &hostUBOVert, sizeof(hostUBOVert));
 
