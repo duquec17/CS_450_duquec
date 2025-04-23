@@ -99,7 +99,7 @@ static void mouse_position_callback(GLFWwindow* window, double xpos, double ypos
         glm::vec3 cameraDirection = glm::normalize(sceneData->lookAt - sceneData->eye);
 
         // Compute local x-axis
-        glm::vec3 localXAxis = glm::normalize(glm::cross(cameraDirection, glm::vec3 (0.0f, 1.0f, 0.0f)));
+        glm::vec3 localXAxis = glm::normalize(glm::cross(-cameraDirection, glm::vec3 (0.0f, 1.0f, 0.0f)));
 
         // Relative x motion
         glm::mat4 rotateX = makeLocalRotate(
