@@ -64,7 +64,7 @@ class Assign03RenderEngine : public VulkanRenderEngine{
                                      vk::CommandBuffer &commandBuffer,
                                      unsigned int frameIndex) override {
         // Void data is assumed to be vector of meshes only
-        vector<VulkanMesh> *allMeshes = static_cast<vector<VulkanMesh>*>(userData);
+        //vector<VulkanMesh> *allMeshes = static_cast<vector<VulkanMesh>*>(userData);
 
         // Cast the userData as a SceneData pointer
         SceneData *sceneData = static_cast<SceneData*>(userData);
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
     VulkanRenderEngine *renderEngine = new Assign03RenderEngine(vkInitData);
     renderEngine->initialize(&params);
 
-    VulkanMesh vulkanMesh;
+    //VulkanMesh vulkanMesh;
 
     // Create a mesh vertex obj. inside the loop
     for (unsigned int i = 0; i < sceneData.scene->mNumMeshes; i++) {
@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
         Mesh<Vertex> mesh;
         extractMeshData(aiMesh, mesh);
 
-        vulkanMesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), mesh);
+        VulkanMesh vulkanMesh = createVulkanMesh(vkInitData, renderEngine->getCommandPool(), mesh);
         sceneData.allMeshes.push_back(vulkanMesh);
     }
 
@@ -362,7 +362,7 @@ int main(int argc, char **argv) {
 
     // Cleanup & After drawing loop
     //cleanupVulkanMesh(vkInitData, mesh);
-    for (auto &VulkanMesh : sceneData.allMeshes) {
+    for (auto &vulkanMesh : sceneData.allMeshes) {
         cleanupVulkanMesh(vkInitData, vulkanMesh);
     }
     sceneData.allMeshes.clear();
