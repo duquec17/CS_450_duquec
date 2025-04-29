@@ -650,7 +650,7 @@ int main(int argc, char **argv) {
         sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
         
         // Update light's view position
-        sceneData.light.vpos = glm::vec3(sceneData.viewMat * glm::vec4(sceneData.light.wpos, 1.0f));
+        sceneData.light.vpos = (sceneData.viewMat * sceneData.light.pos);
 
         // Get start time
         auto startTime = getTime();
