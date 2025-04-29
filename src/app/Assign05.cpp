@@ -18,6 +18,7 @@
 struct Vertex {
     glm::vec3 pos;
     glm::vec4 color;
+    glm::vec3 normal;
 };
 
 // Hold scene data
@@ -31,6 +32,14 @@ struct SceneData {
     glm::vec2 mousePos;
     glm::mat4 viewMat;
     glm::mat4 projMat;
+
+    PointLight light {
+        glm::vec4(0.5, 0.5, 0.5, 1.0),
+        glm::vec4(0.0f),
+        glm::vec4(1,1,1,1)
+    };
+    float metallic = 0.0f;
+    float roughness = 0.1f;
 };
 
 // Hold Vertex shader UBO host data
@@ -42,6 +51,21 @@ struct UBOVertex {
 // Hold vertex shader push constants
 struct UPushVertex {
     alignas(16)glm::mat4 modelMat;
+    alignas(16)glm::mat4 normMat;
+};
+
+// Hold data for a point light
+struct PointLight {
+    alignas(16)glm::vec4 pos;
+    alignas(16)glm::vec4 vpos;
+    alignas(16)glm::vec4 color;
+};
+
+// Hold fragment shader UBO host data
+struct UBOFragment {
+    PointLight light;
+    alignas(4) float metallic = 0.0f;
+    alignas(4) float roughness = 0.1f;
 };
 
 // Global instance of struct
@@ -122,6 +146,9 @@ class Assign05RenderEngine : public VulkanRenderEngine{
     protected:
         UBOVertex hostUBOVert;
         UBOData deviceUBOVert;
+        UBOFragment hostUBOFrag;
+        UBOData deviceUBOFrag;
+
         vk::DescriptorPool descriptorPool;
         vector<vk::DescriptorSet> descriptorSets;
 
@@ -137,16 +164,23 @@ class Assign05RenderEngine : public VulkanRenderEngine{
 
         // Create deviceUBOVert
         deviceUBOVert = createVulkanUniformBufferData(
-            vkInitData.device, vkInitData.physicalDevice, sizeof(UBOVertex), MAX_FRAMES_IN_FLIGHT);
+            vkInitData.device, vkInitData.physicalDevice, 
+            sizeof(UBOVertex), MAX_FRAMES_IN_FLIGHT);
+
+        // Create deviceUBOVert Frag
+        deviceUBOFrag = createVulkanUniformBufferData(
+            vkInitData.device, vkInitData.physicalDevice, 
+            sizeof(UBOFragment), MAX_FRAMES_IN_FLIGHT);
 
         // Create descriptor pool
         std::vector<vk::DescriptorPoolSize> poolSizes = {
-            {vk::DescriptorType::eUniformBuffer,static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)}
+            {vk::DescriptorType::eUniformBuffer, 2 * static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT)}
         };
         
         vk::DescriptorPoolCreateInfo poolCreateInfo = {};
         poolCreateInfo.setPoolSizes(poolSizes)
                       .setMaxSets(MAX_FRAMES_IN_FLIGHT);
+        
         descriptorPool = vkInitData.device.createDescriptorPool(poolCreateInfo);
 
         // Create descriptor sets
@@ -171,7 +205,20 @@ class Assign05RenderEngine : public VulkanRenderEngine{
                  .setDescriptorCount(1)
                  .setBufferInfo(bufferInfo);
 
-            vkInitData.device.updateDescriptorSets({write}, {});
+            vk::DescriptorBufferInfo bufferFragInfo = {};
+            bufferFragInfo.setBuffer(deviceUBOVert.bufferData[i].buffer)
+                          .setOffset(0)
+                          .setRange(sizeof(UBOFragment));
+
+            vk::WriteDescriptorSet descFragWrites = {};
+            descFragWrites.setDstSet(descriptorSets[i])
+                          .setDstBinding(1)
+                          .setDstArrayElement(0)
+                          .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                          .setDescriptorCount(1)
+                          .setBufferInfo(bufferFragInfo);
+
+            vkInitData.device.updateDescriptorSets({write, descFragWrites}, {});
         }
 
         return true;
@@ -179,12 +226,18 @@ class Assign05RenderEngine : public VulkanRenderEngine{
 
     // Override getDiscriptorSetLayOuts
     virtual std::vector<vk::DescriptorSetLayout> getDescriptorSetLayouts() override {
-        vk::DescriptorSetLayoutBinding binding = {};
+        vk::DescriptorSetLayoutBinding binding, allBindings = {};
         binding.setBinding(0)
                .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                .setDescriptorCount(1)
                .setStageFlags(vk::ShaderStageFlagBits::eVertex)
                .setPImmutableSamplers(nullptr);
+
+        allBindings.setBinding(1)
+                   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                   .setDescriptorCount(1)
+                   .setStageFlags(vk::ShaderStageFlagBits::eFragment)
+                   .setPImmutableSamplers(nullptr);
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.setBindings(binding);
@@ -246,7 +299,8 @@ class Assign05RenderEngine : public VulkanRenderEngine{
     // Destructor
     virtual~Assign05RenderEngine(){
         vkInitData.device.destroyDescriptorPool(descriptorPool);
-        cleanupVulkanUniformBufferData(vkInitData.device, deviceUBOVert);
+        cleanupVulkanUniformBufferData(vkInitData.device, deviceUBOVert); // Vertex cleaner
+        cleanupVulkanUniformBufferData(vkInitData.device, deviceUBOFrag); // Frag cleaner
     };
 
     virtual vector<vk::PushConstantRange>getPushConstantRanges()override{
@@ -351,6 +405,38 @@ void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods
             case GLFW_KEY_A:
                 sceneData->eye -= localXAxis * speed;
                 sceneData->lookAt -= localXAxis * speed;
+                break;
+
+            case GLFW_KEY_1:
+                sceneData->light.color = glm::vec4 (1,1,1,1); // White
+                break;
+
+            case GLFW_KEY_2:
+                sceneData->light.color = glm::vec4 (1,0,0,1); // Red
+                break;
+            
+            case GLFW_KEY_3:
+                sceneData->light.color = glm::vec4 (0,1,0,1); // Green
+                break;
+            
+            case GLFW_KEY_4:
+                sceneData->light.color = glm::vec4 (0,0,1,1); // Blue
+                break;
+
+            case GLFW_KEY_V:
+                sceneData->metallic = std::max(0.0f, sceneData->metallic - 0.1f);
+                break;
+
+            case GLFW_KEY_B:
+                sceneData->metallic = std::min(1.0f, sceneData->metallic + 0.1f);
+                break;
+
+            case GLFW_KEY_N:
+                sceneData->roughness = std::max(0.1f, sceneData->roughness - 0.1f);
+                break;
+
+            case GLFW_KEY_M:
+                sceneData->metallic = std::min(0.7f, sceneData->roughness + 0.1f);
                 break;
         }
     }
