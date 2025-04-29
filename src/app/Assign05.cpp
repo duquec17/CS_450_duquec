@@ -246,6 +246,52 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         return {layout};
     }
 
+    // Override AttributeDescData
+    virtual AttributeDescData getAttributeDescData() override {
+        // Create attribDesc
+        AttributeDescData attribDescData;
+        
+        // Set attribDesc
+        attribDescData.bindDesc = 
+        vk::VertexInputBindingDescription(0, sizeof(Vertex),
+        vk::VertexInputRate::eVertex);
+
+        // Clear attrib
+        attribDescData.attribDesc.clear();
+
+        // Instance 1 (Position)
+        attribDescData.attribDesc.push_back(
+            vk::VertexInputAttributeDescription(
+                0,
+                0,
+                vk::Format:: eR32G32B32Sfloat,
+                offsetof(Vertex, pos)
+            )
+        );
+
+        // Instance 2 (color)
+        attribDescData.attribDesc.push_back(
+            vk::VertexInputAttributeDescription(
+                1,
+                0,
+                vk::Format:: eR32G32B32A32Sfloat,
+                offsetof(Vertex, color)
+            )
+        );
+
+        // Instance 3 (normal)
+        attribDescData.attribDesc.push_back(
+            vk::VertexInputAttributeDescription(
+                2,
+                0,
+                vk::Format:: eR32G32B32Sfloat,
+                offsetof(Vertex, normal)
+            )
+        );
+
+        return attribDescData;
+    }
+
     // Update uniform buffers
     virtual void updateUniformBuffers(SceneData *sceneData, vk::CommandBuffer &commandBuffer) {
         hostUBOVert.viewMat = sceneData->viewMat;
@@ -253,6 +299,13 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
 
         memcpy(deviceUBOVert.mapped[currentImage], &hostUBOVert, sizeof(hostUBOVert));
+
+        // Copy values from sceneData into appropriate fields
+        hostUBOFrag.light = sceneData->light;
+        hostUBOFrag.metallic = sceneData->metallic;
+        hostUBOFrag.roughness = sceneData->roughness;
+
+        memcpy(deviceUBOFrag.mapped[this->currentImage], &hostUBOFrag, sizeof(hostUBOFrag));
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, pipelineData.pipelineLayout, 0,
@@ -335,8 +388,12 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         glm::mat4 R = makeRotateZ(sceneData->rotAngle, pos);
         glm::mat4 tmpModel = R * modelMat;
 
+        // Compute normal matrix
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(sceneData->viewMat * tmpModel)));
+
         UPushVertex uPush;
         uPush.modelMat = tmpModel;
+        uPush.normMat = glm::mat4(normalMatrix);
 
         commandBuffer.pushConstants<UPushVertex>(
             this->pipelineData.pipelineLayout,
@@ -461,13 +518,19 @@ void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
             mesh->mVertices[i].z
         );
 
-        //Set the color of the vertex to any color other than (0,0,1) or the background
-        vertex.color = glm::vec4(
-            (float)(i % 256) / 255.0f, // Red
-            (float)((i / 256) % 256) / 255.0f, // Green
-            0.5f, // Blue
-            1.0f // Alpha
-        );
+        // Set the color of the vertex to any color other than (0,0,1) or the background
+        vertex.color = glm::vec4(1.0f,1.0f,0.0f,1.0f);
+
+        // Set the normal using data from mesh
+        if (mesh->HasNormals()) {
+            vertex.normal = glm::vec3(
+                mesh->mNormals[i].x,
+                mesh->mNormals[i].y,
+                mesh->mNormals[i].z
+            );
+        } else {
+            vertex.normal = glm::vec3(0.0f, 0.0f, 0.0f); // Default normal if not available
+        }
 
         // Add the vertex to the mesh's vertices list
         m.vertices.push_back(vertex);
@@ -586,6 +649,9 @@ int main(int argc, char **argv) {
         // Update view matrix using glm::lookAt
         sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
         
+        // Update light's view position
+        sceneData.light.vpos = glm::vec3(sceneData.viewMat * glm::vec4(sceneData.light.wpos, 1.0f));
+
         // Get start time
         auto startTime = getTime();
 
