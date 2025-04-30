@@ -94,10 +94,11 @@ void main() {
     vec3 specular = (kS * NDF * G) / (4.0 * max(dot(N, L), 0.0) * max(dot(N, V), 0.0) + 0.0001);
 
     // Gamma-correct (linear to sRGB)
-    vec4 finalColor = fragColor;
-    //finalColor.rgb = pow(finalColor.rgb, vec3(2.2));
+    vec3 finalColor = (kD + specular) * vec3(ubo.light.color) * max(dot(N, L), 0.0);
 
+    //finalColor.rgb = pow(finalColor.rgb, vec3(2.2));
+    
     // Output final color
-    outColor = finalColor;
+    outColor = vec4(finalColor,1.0);
 
 } 
