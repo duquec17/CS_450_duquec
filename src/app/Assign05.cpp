@@ -21,6 +21,13 @@ struct Vertex {
     glm::vec3 normal;
 };
 
+// Hold data for a point light
+struct PointLight {
+    alignas(16)glm::vec4 pos;
+    alignas(16)glm::vec4 vpos;
+    alignas(16)glm::vec4 color;
+};
+
 // Hold scene data
 struct SceneData {
     vector<VulkanMesh> allMeshes;
@@ -34,10 +41,11 @@ struct SceneData {
     glm::mat4 projMat;
 
     PointLight light {
-        glm::vec4(0.5, 0.5, 0.5, 1.0),
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
         glm::vec4(0.0f),
-        glm::vec4(1,1,1,1)
+        glm::vec4(1.0f,1.0f,1.0f,1.0f)
     };
+
     float metallic = 0.0f;
     float roughness = 0.1f;
 };
@@ -52,13 +60,6 @@ struct UBOVertex {
 struct UPushVertex {
     alignas(16)glm::mat4 modelMat;
     alignas(16)glm::mat4 normMat;
-};
-
-// Hold data for a point light
-struct PointLight {
-    alignas(16)glm::vec4 pos;
-    alignas(16)glm::vec4 vpos;
-    alignas(16)glm::vec4 color;
 };
 
 // Hold fragment shader UBO host data
@@ -224,23 +225,29 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         return true;
     };
 
-    // Override getDiscriptorSetLayOuts
+    // Change Override getDiscriptorSetLayOuts
     virtual std::vector<vk::DescriptorSetLayout> getDescriptorSetLayouts() override {
         vk::DescriptorSetLayoutBinding binding, allBindings = {};
+        
+        // Vertex shader UBO binding
         binding.setBinding(0)
                .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                .setDescriptorCount(1)
                .setStageFlags(vk::ShaderStageFlagBits::eVertex)
                .setPImmutableSamplers(nullptr);
 
+        // Fragment shader UBO binding
         allBindings.setBinding(1)
                    .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                    .setDescriptorCount(1)
                    .setStageFlags(vk::ShaderStageFlagBits::eFragment)
                    .setPImmutableSamplers(nullptr);
 
+        // Create a vector to store both bindings
+        std::vector<vk::DescriptorSetLayoutBinding> allBindingsVec = {binding, allBindings};
+
         vk::DescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.setBindings(binding);
+        layoutInfo.setBindings(allBindingsVec);
 
         vk::DescriptorSetLayout layout = vkInitData.device.createDescriptorSetLayout(layoutInfo);
         return {layout};
@@ -493,7 +500,7 @@ void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods
                 break;
 
             case GLFW_KEY_M:
-                sceneData->metallic = std::min(0.7f, sceneData->roughness + 0.1f);
+                sceneData->roughness = std::min(0.7f, sceneData->roughness + 0.1f);
                 break;
         }
     }
@@ -549,6 +556,7 @@ void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
 }
 
 int main(int argc, char **argv) {
+    // Start message
     cout << "BEGIN Model FORGING!!!" << endl;
 
     // The model to load will be provided on the command line
