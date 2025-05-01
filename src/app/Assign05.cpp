@@ -330,7 +330,7 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         vk::Extent2D extent = vkInitData.swapchain.extent;
 
         std::array<vk::ClearValue, 2> clearValues = {
-            vk::ClearColorValue(std::array<float, 4>{0.6f, 0.1f, 0.7f, 1.0f}),
+            vk::ClearColorValue(std::array<float, 4>{0.6f, 0.8f, 0.3f, 1.0f}),
             vk::ClearDepthStencilValue(1.0f, 0.0f)
         };
 
