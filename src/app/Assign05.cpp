@@ -207,7 +207,7 @@ class Assign05RenderEngine : public VulkanRenderEngine{
                  .setBufferInfo(bufferInfo);
 
             vk::DescriptorBufferInfo bufferFragInfo = {};
-            bufferFragInfo.setBuffer(deviceUBOVert.bufferData[i].buffer)
+            bufferFragInfo.setBuffer(deviceUBOFrag.bufferData[i].buffer)
                           .setOffset(0)
                           .setRange(sizeof(UBOFragment));
 
@@ -663,7 +663,7 @@ int main(int argc, char **argv) {
         // Get start time
         auto startTime = getTime();
 
-        glfwSwapBuffers(window);
+        //glfwSwapBuffers(window);
 
         // Poll events for window
         glfwPollEvents();

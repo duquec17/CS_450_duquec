@@ -12,7 +12,7 @@ struct PointLight {
     vec4 color;
 };
 
-layout(std140, set = 0, binding = 1) uniform UBOFragment {
+layout(set = 0, binding = 1) uniform UBOFragment {
     PointLight light;
     float metallic;
     float roughness;
@@ -96,9 +96,13 @@ void main() {
     // Gamma-correct (linear to sRGB)
     vec3 finalColor = (kD + specular) * vec3(ubo.light.color) * max(dot(N, L), 0.0);
 
-    finalColor.rgb = pow(finalColor.rgb, vec3(2.2));
+    //finalColor.rgb = pow(finalColor.rgb, vec3(2.2));
 
     // Output final color
     outColor = vec4(finalColor,1.0);
+
+    //float diffComp = max(dot(N,L), 0);
+    //outColor = vec4(diffComp, diffComp, diffComp, 1.0);
+    //outColor = vec4(vec3(ubo.light.color), 1.0);
 
 } 
