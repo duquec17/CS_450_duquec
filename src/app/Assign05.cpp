@@ -21,6 +21,13 @@ struct Vertex {
     glm::vec3 normal;
 };
 
+// Hold data for a point light
+struct PointLight {
+    alignas(16)glm::vec4 pos;
+    alignas(16)glm::vec4 vpos;
+    alignas(16)glm::vec4 color;
+};
+
 // Hold scene data
 struct SceneData {
     vector<VulkanMesh> allMeshes;
@@ -34,10 +41,11 @@ struct SceneData {
     glm::mat4 projMat;
 
     PointLight light {
-        glm::vec4(0.5, 0.5, 0.5, 1.0),
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
         glm::vec4(0.0f),
-        glm::vec4(1,1,1,1)
+        glm::vec4(1.0f,1.0f,1.0f,1.0f)
     };
+
     float metallic = 0.0f;
     float roughness = 0.1f;
 };
@@ -52,13 +60,6 @@ struct UBOVertex {
 struct UPushVertex {
     alignas(16)glm::mat4 modelMat;
     alignas(16)glm::mat4 normMat;
-};
-
-// Hold data for a point light
-struct PointLight {
-    alignas(16)glm::vec4 pos;
-    alignas(16)glm::vec4 vpos;
-    alignas(16)glm::vec4 color;
 };
 
 // Hold fragment shader UBO host data
@@ -206,7 +207,7 @@ class Assign05RenderEngine : public VulkanRenderEngine{
                  .setBufferInfo(bufferInfo);
 
             vk::DescriptorBufferInfo bufferFragInfo = {};
-            bufferFragInfo.setBuffer(deviceUBOVert.bufferData[i].buffer)
+            bufferFragInfo.setBuffer(deviceUBOFrag.bufferData[i].buffer)
                           .setOffset(0)
                           .setRange(sizeof(UBOFragment));
 
@@ -224,26 +225,78 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         return true;
     };
 
-    // Override getDiscriptorSetLayOuts
+    // Change Override getDiscriptorSetLayOuts
     virtual std::vector<vk::DescriptorSetLayout> getDescriptorSetLayouts() override {
         vk::DescriptorSetLayoutBinding binding, allBindings = {};
+        
+        // Vertex shader UBO binding
         binding.setBinding(0)
                .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                .setDescriptorCount(1)
                .setStageFlags(vk::ShaderStageFlagBits::eVertex)
                .setPImmutableSamplers(nullptr);
 
+        // Fragment shader UBO binding
         allBindings.setBinding(1)
                    .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                    .setDescriptorCount(1)
                    .setStageFlags(vk::ShaderStageFlagBits::eFragment)
                    .setPImmutableSamplers(nullptr);
 
+        // Create a vector to store both bindings
+        std::vector<vk::DescriptorSetLayoutBinding> allBindingsVec = {binding, allBindings};
+
         vk::DescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.setBindings(binding);
+        layoutInfo.setBindings(allBindingsVec);
 
         vk::DescriptorSetLayout layout = vkInitData.device.createDescriptorSetLayout(layoutInfo);
         return {layout};
+    }
+
+    // Override AttributeDescData
+    virtual AttributeDescData getAttributeDescData() override {
+        // Create attribDesc
+        AttributeDescData attribDescData;
+        
+        // Set attribDesc
+        attribDescData.bindDesc = 
+        vk::VertexInputBindingDescription(0, sizeof(Vertex),
+        vk::VertexInputRate::eVertex);
+
+        // Clear attrib
+        attribDescData.attribDesc.clear();
+
+        // Instance 1 (Position)
+        attribDescData.attribDesc.push_back(
+            vk::VertexInputAttributeDescription(
+                0,
+                0,
+                vk::Format:: eR32G32B32Sfloat,
+                offsetof(Vertex, pos)
+            )
+        );
+
+        // Instance 2 (color)
+        attribDescData.attribDesc.push_back(
+            vk::VertexInputAttributeDescription(
+                1,
+                0,
+                vk::Format:: eR32G32B32A32Sfloat,
+                offsetof(Vertex, color)
+            )
+        );
+
+        // Instance 3 (normal)
+        attribDescData.attribDesc.push_back(
+            vk::VertexInputAttributeDescription(
+                2,
+                0,
+                vk::Format:: eR32G32B32Sfloat,
+                offsetof(Vertex, normal)
+            )
+        );
+
+        return attribDescData;
     }
 
     // Update uniform buffers
@@ -253,6 +306,13 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         hostUBOVert.projMat[1][1] *= -1; // Invert Y-axis for Vulkan
 
         memcpy(deviceUBOVert.mapped[currentImage], &hostUBOVert, sizeof(hostUBOVert));
+
+        // Copy values from sceneData into appropriate fields
+        hostUBOFrag.light = sceneData->light;
+        hostUBOFrag.metallic = sceneData->metallic;
+        hostUBOFrag.roughness = sceneData->roughness;
+
+        memcpy(deviceUBOFrag.mapped[this->currentImage], &hostUBOFrag, sizeof(hostUBOFrag));
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, pipelineData.pipelineLayout, 0,
@@ -270,7 +330,7 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         vk::Extent2D extent = vkInitData.swapchain.extent;
 
         std::array<vk::ClearValue, 2> clearValues = {
-            vk::ClearColorValue(std::array<float, 4>{0.6f, 0.1f, 0.7f, 1.0f}),
+            vk::ClearColorValue(std::array<float, 4>{0.6f, 0.8f, 0.3f, 1.0f}),
             vk::ClearDepthStencilValue(1.0f, 0.0f)
         };
 
@@ -335,8 +395,12 @@ class Assign05RenderEngine : public VulkanRenderEngine{
         glm::mat4 R = makeRotateZ(sceneData->rotAngle, pos);
         glm::mat4 tmpModel = R * modelMat;
 
+        // Compute normal matrix
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(sceneData->viewMat * tmpModel)));
+
         UPushVertex uPush;
         uPush.modelMat = tmpModel;
+        uPush.normMat = glm::mat4(normalMatrix);
 
         commandBuffer.pushConstants<UPushVertex>(
             this->pipelineData.pipelineLayout,
@@ -436,7 +500,7 @@ void keyCallBack(GLFWwindow* window, int key, int scanCode, int action, int mods
                 break;
 
             case GLFW_KEY_M:
-                sceneData->metallic = std::min(0.7f, sceneData->roughness + 0.1f);
+                sceneData->roughness = std::min(0.7f, sceneData->roughness + 0.1f);
                 break;
         }
     }
@@ -461,13 +525,19 @@ void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
             mesh->mVertices[i].z
         );
 
-        //Set the color of the vertex to any color other than (0,0,1) or the background
-        vertex.color = glm::vec4(
-            (float)(i % 256) / 255.0f, // Red
-            (float)((i / 256) % 256) / 255.0f, // Green
-            0.5f, // Blue
-            1.0f // Alpha
-        );
+        // Set the color of the vertex to any color other than (0,0,1) or the background
+        vertex.color = glm::vec4(1.0f,1.0f,0.0f,1.0f);
+
+        // Set the normal using data from mesh
+        if (mesh->HasNormals()) {
+            vertex.normal = glm::vec3(
+                mesh->mNormals[i].x,
+                mesh->mNormals[i].y,
+                mesh->mNormals[i].z
+            );
+        } else {
+            vertex.normal = glm::vec3(0.0f, 0.0f, 0.0f); // Default normal if not available
+        }
 
         // Add the vertex to the mesh's vertices list
         m.vertices.push_back(vertex);
@@ -486,6 +556,7 @@ void extractMeshData(aiMesh *mesh, Mesh<Vertex>&m) {
 }
 
 int main(int argc, char **argv) {
+    // Start message
     cout << "BEGIN Model FORGING!!!" << endl;
 
     // The model to load will be provided on the command line
@@ -586,10 +657,13 @@ int main(int argc, char **argv) {
         // Update view matrix using glm::lookAt
         sceneData.viewMat = glm::lookAt(sceneData.eye, sceneData.lookAt, glm::vec3(0.0f, 1.0f, 0.0f));
         
+        // Update light's view position
+        sceneData.light.vpos = (sceneData.viewMat * sceneData.light.pos);
+
         // Get start time
         auto startTime = getTime();
 
-        glfwSwapBuffers(window);
+        //glfwSwapBuffers(window);
 
         // Poll events for window
         glfwPollEvents();
