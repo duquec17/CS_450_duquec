@@ -14,6 +14,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #include <vulkan/vulkan_structs.hpp>
 
+
 // Hold information for a vertex
 struct Vertex {
     glm::vec3 pos;
